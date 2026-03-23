@@ -67,7 +67,7 @@ private static final String PASSWORD = "mật_khẩu_của_bạn_ở_đây"; // 
 (Lưu ý: Không commit/push file DBConnection.java lên lại Git nếu bạn chỉ đổi mật khẩu cá nhân, để tránh ghi đè mật khẩu của người khác).
 ```
 ## 🧪 3. Chạy thử kết nối (Test Connection)
-- Mở file DBConnection.java.
+- Mở file src/test/TestDBConnection.java.
 - Chạy (Run) trực tiếp hàm main có trong file này.
 - Nếu Console in ra: ✅ KẾT NỐI CƠ SỞ DỮ LIỆU THÀNH CÔNG! -> Bạn đã setup xong! Sẵn sàng code.
 - Nếu báo lỗi đỏ (Login failed, TCP/IP port...), hãy kiểm tra lại Bước 4 hoặc xem SQL Server đã bật giao thức TCP/IP trong Configuration Manager chưa.
