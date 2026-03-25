@@ -6,6 +6,9 @@ import java.util.ArrayList;
 
 public class BanAnDAO implements IDAO<BanAnDTO, String> {
 
+    public BanAnDAO() {
+        super();
+    }
     @Override
     public boolean insert(BanAnDTO obj) {
         String sql = "INSERT INTO BanAn (MaBan, TenBan, SucChua, KhuVuc, TrangThai) VALUES (?, ?, ?, ?, ?)";
