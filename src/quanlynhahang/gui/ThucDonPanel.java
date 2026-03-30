@@ -1,0 +1,155 @@
+package quanlynhahang.gui;
+
+import quanlynhahang.dao.MonAnDAO;
+import quanlynhahang.dto.MonAnDTO;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.util.ArrayList;
+
+public class ThucDonPanel extends JPanel {
+
+    private DefaultTableModel tableModel;
+    private JTable table;
+
+    // Các ô nhập liệu
+    private JTextField txtMaMon, txtTenMon, txtGiaBan;
+    private JComboBox<String> cbxPhanLoai, cbxTrangThai;
+
+    public ThucDonPanel() {
+        setLayout(new BorderLayout(10, 10));
+        setBackground(new Color(241, 245, 249));
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // ==========================================
+        // 1. TIÊU ĐỀ
+        // ==========================================
+        JLabel lblTitle = new JLabel("🍔 QUẢN LÝ THỰC ĐƠN & MÓN ĂN");
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        add(lblTitle, BorderLayout.NORTH);
+
+        // ==========================================
+        // 2. BẢNG HIỂN THỊ MÓN ĂN
+        // ==========================================
+        String[] columns = {"Mã Món", "Tên Món", "Phân Loại", "Giá Bán (VNĐ)", "Trạng Thái"};
+        tableModel = new DefaultTableModel(columns, 0);
+        table = new JTable(tableModel);
+        table.setRowHeight(30);
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+
+        add(new JScrollPane(table), BorderLayout.CENTER);
+
+        // ==========================================
+        // 3. FORM NHẬP LIỆU (Bên phải)
+        // ==========================================
+        JPanel pnlRight = new JPanel(new BorderLayout());
+        pnlRight.setPreferredSize(new Dimension(320, 0));
+        pnlRight.setBackground(Color.WHITE);
+        pnlRight.setBorder(BorderFactory.createTitledBorder("Thông tin món ăn"));
+
+        JPanel pnlForm = new JPanel(new GridLayout(10, 1, 5, 5));
+        pnlForm.setBackground(Color.WHITE);
+
+        txtMaMon = new JTextField();
+        txtTenMon = new JTextField();
+        cbxPhanLoai = new JComboBox<>(new String[]{"Thịt nướng", "Hải sản", "Combo", "Khai vị", "Đồ ăn kèm", "Nước uống"});
+        txtGiaBan = new JTextField();
+        cbxTrangThai = new JComboBox<>(new String[]{"Còn phục vụ", "Hết hàng"});
+
+        pnlForm.add(new JLabel("Mã món:")); pnlForm.add(txtMaMon);
+        pnlForm.add(new JLabel("Tên món:")); pnlForm.add(txtTenMon);
+        pnlForm.add(new JLabel("Phân loại:")); pnlForm.add(cbxPhanLoai);
+        pnlForm.add(new JLabel("Giá bán (VNĐ):")); pnlForm.add(txtGiaBan);
+        pnlForm.add(new JLabel("Trạng thái:")); pnlForm.add(cbxTrangThai);
+
+        pnlRight.add(pnlForm, BorderLayout.NORTH);
+
+        // Nút bấm
+        JPanel pnlButtons = new JPanel(new GridLayout(2, 2, 5, 5));
+        pnlButtons.setBackground(Color.WHITE);
+        JButton btnThem = new JButton("Thêm mới");
+        JButton btnSua = new JButton("Cập nhật");
+        JButton btnXoa = new JButton("Xóa (Mềm)");
+        JButton btnLamMoi = new JButton("Làm mới Form");
+
+        pnlButtons.add(btnThem); pnlButtons.add(btnSua);
+        pnlButtons.add(btnXoa); pnlButtons.add(btnLamMoi);
+        pnlRight.add(pnlButtons, BorderLayout.SOUTH);
+
+        add(pnlRight, BorderLayout.EAST);
+
+        // ==========================================
+        // 4. XỬ LÝ SỰ KIỆN
+        // ==========================================
+        // Load dữ liệu lên bảng
+        loadData();
+
+        // Click vào bảng -> Đổ dữ liệu sang Form
+        table.getSelectionModel().addListSelectionListener(e -> {
+            int row = table.getSelectedRow();
+            if(row >= 0) {
+                txtMaMon.setText(tableModel.getValueAt(row, 0).toString());
+                txtTenMon.setText(tableModel.getValueAt(row, 1).toString());
+                cbxPhanLoai.setSelectedItem(tableModel.getValueAt(row, 2).toString());
+                txtGiaBan.setText(tableModel.getValueAt(row, 3).toString());
+                cbxTrangThai.setSelectedItem(tableModel.getValueAt(row, 4).toString());
+                txtMaMon.setEditable(false); // Không cho sửa mã món
+            }
+        });
+
+        // Nút Thêm Mới
+        btnThem.addActionListener(e -> {
+            try {
+                MonAnDTO mon = new MonAnDTO(txtMaMon.getText(), txtTenMon.getText(),
+                        cbxPhanLoai.getSelectedItem().toString(), Double.parseDouble(txtGiaBan.getText()),
+                        cbxTrangThai.getSelectedIndex() == 0);
+                if(new MonAnDAO().insert(mon)) {
+                    JOptionPane.showMessageDialog(this, "Thêm món thành công!");
+                    loadData();
+                } else JOptionPane.showMessageDialog(this, "Lỗi! Trùng mã món.");
+            } catch (Exception ex) { JOptionPane.showMessageDialog(this, "Giá bán phải là số!"); }
+        });
+
+        // Nút Cập Nhật
+        btnSua.addActionListener(e -> {
+            try {
+                MonAnDTO mon = new MonAnDTO(txtMaMon.getText(), txtTenMon.getText(),
+                        cbxPhanLoai.getSelectedItem().toString(), Double.parseDouble(txtGiaBan.getText()),
+                        cbxTrangThai.getSelectedIndex() == 0);
+                if(new MonAnDAO().update(mon)) {
+                    JOptionPane.showMessageDialog(this, "Cập nhật thành công!");
+                    loadData();
+                }
+            } catch (Exception ex) { JOptionPane.showMessageDialog(this, "Lỗi nhập liệu!"); }
+        });
+
+        // Nút Xóa Mềm (Ngừng phục vụ)
+        btnXoa.addActionListener(e -> {
+            if(new MonAnDAO().xoaMem(txtMaMon.getText())) {
+                JOptionPane.showMessageDialog(this, "Đã chuyển món về trạng thái Hết hàng!");
+                loadData();
+            }
+        });
+
+        // Nút Làm mới
+        btnLamMoi.addActionListener(e -> {
+            txtMaMon.setEditable(true); txtMaMon.setText(""); txtTenMon.setText(""); txtGiaBan.setText("");
+            table.clearSelection();
+        });
+    }
+
+    // Hàm gọi DAO đổ dữ liệu lên Bảng
+    private void loadData() {
+        tableModel.setRowCount(0);
+        ArrayList<MonAnDTO> dsMon = new MonAnDAO().getAll();
+        for (MonAnDTO m : dsMon) {
+            tableModel.addRow(new Object[]{
+                    m.getMaMon(), m.getTenMon(), m.getPhanLoai(),
+                    String.format("%,.0f", m.getGiaHienTai()), // Format số tiền cho đẹp
+                    m.isTrangThaiPhucVu() ? "Còn phục vụ" : "Hết hàng"
+            });
+        }
+    }
+}
