@@ -1,30 +1,81 @@
 package quanlynhahang.dao;
 
 import quanlynhahang.dto.MonAnDTO;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 
-public class MonAnDAO {
+public class MonAnDAO implements IDAO<MonAnDTO, String> {
 
-    // 1. LẤY DANH SÁCH TẤT CẢ MÓN ĂN
+    @Override
+    public boolean insert(MonAnDTO obj) {
+        String sql = "INSERT INTO MonAn (maMon, tenMon, phanLoai, giaHienTai, trangThaiPhucVu) VALUES (?, ?, ?, ?, ?)";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, obj.getMaMon());
+            ps.setString(2, obj.getTenMon());
+            ps.setString(3, obj.getPhanLoai());
+            ps.setDouble(4, obj.getGiaHienTai());
+            ps.setBoolean(5, obj.isTrangThaiPhucVu());
+
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    @Override
+    public boolean update(MonAnDTO obj) {
+        String sql = "UPDATE MonAn SET tenMon = ?, phanLoai = ?, giaHienTai = ?, trangThaiPhucVu = ? WHERE maMon = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, obj.getTenMon());
+            ps.setString(2, obj.getPhanLoai());
+            ps.setDouble(3, obj.getGiaHienTai());
+            ps.setBoolean(4, obj.isTrangThaiPhucVu());
+            ps.setString(5, obj.getMaMon());
+
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    @Override
+    public boolean delete(String key) {
+        // Nguyên tắc: Không xóa món ăn khỏi DB để tránh lỗi khóa ngoại với ChiTietHoaDon
+        // Thực hiện cập nhật trạng thái ngừng phục vụ
+        String sql = "UPDATE MonAn SET trangThaiPhucVu = 0 WHERE maMon = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, key);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    @Override
     public ArrayList<MonAnDTO> getAll() {
         ArrayList<MonAnDTO> list = new ArrayList<>();
         String sql = "SELECT * FROM MonAn";
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+
             while (rs.next()) {
-                MonAnDTO mon = new MonAnDTO(
-                        rs.getString("MaMon"),
-                        rs.getString("TenMon"),
-                        rs.getString("PhanLoai"),
-                        rs.getDouble("GiaHienTai"),
-                        rs.getInt("TrangThaiPhucVu") == 1 // Convert BIT trong SQL ra boolean
-                );
-                list.add(mon);
+                list.add(new MonAnDTO(
+                        rs.getString("maMon"),
+                        rs.getString("tenMon"),
+                        rs.getString("phanLoai"),
+                        rs.getDouble("giaHienTai"),
+                        rs.getBoolean("trangThaiPhucVu")
+                ));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -32,47 +83,81 @@ public class MonAnDAO {
         return list;
     }
 
-    // 2. THÊM MÓN MỚI
-    public boolean insert(MonAnDTO mon) {
-        String sql = "INSERT INTO MonAn (MaMon, TenMon, PhanLoai, GiaHienTai, TrangThaiPhucVu) VALUES (?, ?, ?, ?, ?)";
+    @Override
+    public MonAnDTO getById(String key) {
+        String sql = "SELECT * FROM MonAn WHERE maMon = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, mon.getMaMon());
-            ps.setString(2, mon.getTenMon());
-            ps.setString(3, mon.getPhanLoai());
-            ps.setDouble(4, mon.getGiaHienTai());
-            ps.setInt(5, mon.isTrangThaiPhucVu() ? 1 : 0);
-            return ps.executeUpdate() > 0;
+
+            ps.setString(1, key);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return new MonAnDTO(
+                        rs.getString("maMon"),
+                        rs.getString("tenMon"),
+                        rs.getString("phanLoai"),
+                        rs.getDouble("giaHienTai"),
+                        rs.getBoolean("trangThaiPhucVu")
+                );
+            }
         } catch (SQLException e) {
-            return false;
+            e.printStackTrace();
         }
+        return null;
     }
 
-    // 3. CẬP NHẬT MÓN ĂN
-    public boolean update(MonAnDTO mon) {
-        String sql = "UPDATE MonAn SET TenMon=?, PhanLoai=?, GiaHienTai=?, TrangThaiPhucVu=? WHERE MaMon=?";
+    /**
+     * Hàm bổ sung: Lấy danh sách món theo phân loại (Khai vị, Món chính, Nước uống...)
+     * Rất hữu ích cho việc lọc món trên giao diện bán hàng
+     */
+    public ArrayList<MonAnDTO> getByPhanLoai(String loai) {
+        ArrayList<MonAnDTO> list = new ArrayList<>();
+        String sql = "SELECT * FROM MonAn WHERE phanLoai = ? AND trangThaiPhucVu = 1";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, mon.getTenMon());
-            ps.setString(2, mon.getPhanLoai());
-            ps.setDouble(3, mon.getGiaHienTai());
-            ps.setInt(4, mon.isTrangThaiPhucVu() ? 1 : 0);
-            ps.setString(5, mon.getMaMon());
-            return ps.executeUpdate() > 0;
+
+            ps.setString(1, loai);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(new MonAnDTO(
+                        rs.getString("maMon"),
+                        rs.getString("tenMon"),
+                        rs.getString("phanLoai"),
+                        rs.getDouble("giaHienTai"),
+                        rs.getBoolean("trangThaiPhucVu")
+                ));
+            }
         } catch (SQLException e) {
-            return false;
+            e.printStackTrace();
         }
+        return list;
     }
 
-    // 4. "XÓA MỀM" (Ngừng phục vụ món này để không ảnh hưởng Hóa đơn cũ)
-    public boolean xoaMem(String maMon) {
-        String sql = "UPDATE MonAn SET TrangThaiPhucVu = 0 WHERE MaMon=?";
+    /**
+     * Tận dụng View v_ThucDonHienTai để lấy danh sách món đang kinh doanh.
+     * Giúp tầng GUI hiển thị Menu gọn gàng, không bao gồm các món đã ngừng bán.
+     */
+    public ArrayList<MonAnDTO> getThucDonDangPhucVu() {
+        ArrayList<MonAnDTO> list = new ArrayList<>();
+        String sql = "SELECT * FROM v_ThucDonHienTai"; // Gọi trực tiếp từ View
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, maMon);
-            return ps.executeUpdate() > 0;
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+
+            while (rs.next()) {
+                // View này trả về: MaMon, TenMon, PhanLoai, GiaHienTai
+                // Ta set trangThaiPhucVu mặc định là true vì View đã lọc sẵn
+                list.add(new MonAnDTO(
+                        rs.getString("MaMon"),
+                        rs.getString("TenMon"),
+                        rs.getString("PhanLoai"),
+                        rs.getDouble("GiaHienTai"),
+                        true
+                ));
+            }
         } catch (SQLException e) {
-            return false;
+            e.printStackTrace();
         }
+        return list;
     }
 }

@@ -7,7 +7,7 @@ public class BanAnDTO {
     private String khuVuc;
     private String trangThai;
 
-    public BanAnDTO() {
+    public BanAnDTO(String maBan, String tenBan, String khuVuc, int sucChua, String trangThai) {
     }
 
     public BanAnDTO(String maBan, String tenBan, int sucChua, String khuVuc, String trangThai) {

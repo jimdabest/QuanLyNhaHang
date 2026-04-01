@@ -6,102 +6,100 @@ import java.util.ArrayList;
 
 public class BanAnDAO implements IDAO<BanAnDTO, String> {
 
-    public BanAnDAO() {
-        super();
-    }
     @Override
     public boolean insert(BanAnDTO obj) {
-        String sql = "INSERT INTO BanAn (MaBan, TenBan, SucChua, KhuVuc, TrangThai) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO BanAn (maBan, tenBan, sucChua, khuVuc, trangThai) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, obj.getMaBan());
-            ps.setNString(2, obj.getTenBan());
+            ps.setString(2, obj.getTenBan());
             ps.setInt(3, obj.getSucChua());
-            ps.setNString(4, obj.getKhuVuc());
-            ps.setNString(5, obj.getTrangThai());
+            ps.setString(4, obj.getKhuVuc());
+            ps.setString(5, obj.getTrangThai());
 
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
-            return false;
         }
+        return false;
     }
 
     @Override
     public boolean update(BanAnDTO obj) {
-        String sql = "UPDATE BanAn SET TenBan = ?, SucChua = ?, KhuVuc = ?, TrangThai = ? WHERE MaBan = ?";
+        String sql = "UPDATE BanAn SET tenBan = ?, sucChua = ?, khuVuc = ?, trangThai = ? WHERE maBan = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            ps.setNString(1, obj.getTenBan());
+            ps.setString(1, obj.getTenBan());
             ps.setInt(2, obj.getSucChua());
-            ps.setNString(3, obj.getKhuVuc());
-            ps.setNString(4, obj.getTrangThai());
+            ps.setString(3, obj.getKhuVuc());
+            ps.setString(4, obj.getTrangThai());
             ps.setString(5, obj.getMaBan());
 
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
-            return false;
         }
+        return false;
     }
 
     @Override
     public boolean delete(String key) {
-        String sql = "DELETE FROM BanAn WHERE MaBan = ?";
+        // Lưu ý: BUS nên chặn không cho xóa nếu bàn đang có trạng thái "Đang ăn"
+        String sql = "DELETE FROM BanAn WHERE maBan = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, key);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
+            System.err.println("Lỗi: Không thể xóa bàn vì đang có dữ liệu hóa đơn liên quan.");
             e.printStackTrace();
-            return false;
         }
+        return false;
     }
 
     @Override
     public ArrayList<BanAnDTO> getAll() {
-        ArrayList<BanAnDTO> ds = new ArrayList<>();
+        ArrayList<BanAnDTO> list = new ArrayList<>();
         String sql = "SELECT * FROM BanAn";
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
 
             while (rs.next()) {
-                BanAnDTO b = new BanAnDTO(
-                        rs.getString("MaBan"),
-                        rs.getNString("TenBan"),
-                        rs.getInt("SucChua"),
-                        rs.getNString("KhuVuc"),
-                        rs.getNString("TrangThai")
-                );
-                ds.add(b);
+                // Sử dụng Constructor đúng thứ tự: maBan, tenBan, sucChua, khuVuc, trangThai
+                list.add(new BanAnDTO(
+                        rs.getString("maBan"),
+                        rs.getString("tenBan"),
+                        rs.getInt("sucChua"),
+                        rs.getString("khuVuc"),
+                        rs.getString("trangThai")
+                ));
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return ds;
+        return list;
     }
 
     @Override
     public BanAnDTO getById(String key) {
-        String sql = "SELECT * FROM BanAn WHERE MaBan = ?";
+        String sql = "SELECT * FROM BanAn WHERE maBan = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, key);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return new BanAnDTO(
-                            rs.getString("MaBan"),
-                            rs.getNString("TenBan"),
-                            rs.getInt("SucChua"),
-                            rs.getNString("KhuVuc"),
-                            rs.getNString("TrangThai")
-                    );
-                }
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return new BanAnDTO(
+                        rs.getString("maBan"),
+                        rs.getString("tenBan"),
+                        rs.getInt("sucChua"),
+                        rs.getString("khuVuc"),
+                        rs.getString("trangThai")
+                );
             }
         } catch (SQLException e) {
             e.printStackTrace();

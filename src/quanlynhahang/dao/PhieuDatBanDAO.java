@@ -1,50 +1,119 @@
 package quanlynhahang.dao;
 
-import java.sql.CallableStatement;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-// Import DTO của bạn (nếu có)
-// import quanlynhahang.dto.PhieuDatBanDTO;
+import quanlynhahang.dto.PhieuDatBanDTO;
+import java.sql.*;
+import java.util.ArrayList;
 
-public class PhieuDatBanDAO {
+public class PhieuDatBanDAO implements IDAO<PhieuDatBanDTO, String> {
 
-    // 1. GỌI THỦ TỤC HỦY ĐẶT BÀN (sp_HuyPhieuDat)
-    public boolean huyDatBan(String maDatBan) {
-        String sql = "{call sp_HuyPhieuDat(?)}";
+    @Override
+    public boolean insert(PhieuDatBanDTO obj) {
+        String sql = "INSERT INTO PhieuDatBan (maDatBan, maKhachHang, maBan, thoiGianDat, thoiGianNhanBan, soLuongKhach, trangThai, ghiChu) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBConnection.getConnection();
-             CallableStatement cs = conn.prepareCall(sql)) {
+             PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            cs.setString(1, maDatBan);
-            cs.execute();
-            return true;
+            ps.setString(1, obj.getMaDatBan());
+            ps.setString(2, obj.getMaKhachHang());
+            ps.setString(3, obj.getMaBan());
+            // thoiGianDat thường là thời điểm tạo phiếu (hiện tại)
+            ps.setTimestamp(4, new java.sql.Timestamp(obj.getThoiGianDat().getTime()));
+            // thoiGianNhanBan là thời điểm khách hẹn tới
+            ps.setTimestamp(5, new java.sql.Timestamp(obj.getThoiGianNhanBan().getTime()));
+            ps.setInt(6, obj.getSoLuongKhach());
+            ps.setString(7, obj.getTrangThai());
+            ps.setString(8, obj.getGhiChu());
 
-        } catch (SQLException e) {
-            System.err.println("Lỗi hủy bàn: " + e.getMessage());
-            return false;
-        }
-    }
-
-    // 2. LẤY DANH SÁCH ĐẶT BÀN HÔM NAY TỪ VIEW (v_PhieuDatBanHomNay)
-    // Bạn có thể đổi kiểu trả về thành ArrayList<PhieuDatBanDTO>
-    public void inDanhSachKhachHenHomNay() {
-        // Gọi View y hệt như gọi một Table bình thường
-        String sql = "SELECT * FROM v_PhieuDatBanHomNay";
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-
-            System.out.println("--- DANH SÁCH KHÁCH ĐẶT BÀN HÔM NAY ---");
-            while (rs.next()) {
-                System.out.println("Bàn: " + rs.getString("MaBan")
-                        + " | Khách: " + rs.getString("TenKhachHang")
-                        + " | Giờ hẹn: " + rs.getString("GioKhachHen"));
-            }
-
+            return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
         }
+        return false;
+    }
+
+    @Override
+    public boolean update(PhieuDatBanDTO obj) {
+        String sql = "UPDATE PhieuDatBan SET maKhachHang = ?, maBan = ?, thoiGianNhanBan = ?, soLuongKhach = ?, trangThai = ?, ghiChu = ? WHERE maDatBan = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, obj.getMaKhachHang());
+            ps.setString(2, obj.getMaBan());
+            ps.setTimestamp(3, new java.sql.Timestamp(obj.getThoiGianNhanBan().getTime()));
+            ps.setInt(4, obj.getSoLuongKhach());
+            ps.setString(5, obj.getTrangThai());
+            ps.setString(6, obj.getGhiChu());
+            ps.setString(7, obj.getMaDatBan());
+
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    @Override
+    public boolean delete(String key) {
+        // Thay vì xóa, thường chúng ta cập nhật trạng thái thành 'Đã hủy'
+        String sql = "UPDATE PhieuDatBan SET trangThai = N'Đã hủy' WHERE maDatBan = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, key);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    @Override
+    public ArrayList<PhieuDatBanDTO> getAll() {
+        ArrayList<PhieuDatBanDTO> list = new ArrayList<>();
+        String sql = "SELECT * FROM PhieuDatBan ORDER BY thoiGianNhanBan ASC";
+        try (Connection conn = DBConnection.getConnection();
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+
+            while (rs.next()) {
+                list.add(new PhieuDatBanDTO(
+                        rs.getString("maDatBan"),
+                        rs.getString("maKhachHang"),
+                        rs.getString("maBan"),
+                        rs.getTimestamp("thoiGianDat"),
+                        rs.getTimestamp("thoiGianNhanBan"),
+                        rs.getInt("soLuongKhach"),
+                        rs.getString("trangThai"),
+                        rs.getString("ghiChu")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    @Override
+    public PhieuDatBanDTO getById(String key) {
+        String sql = "SELECT * FROM PhieuDatBan WHERE maDatBan = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, key);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return new PhieuDatBanDTO(
+                        rs.getString("maDatBan"),
+                        rs.getString("maKhachHang"),
+                        rs.getString("maBan"),
+                        rs.getTimestamp("thoiGianDat"),
+                        rs.getTimestamp("thoiGianNhanBan"),
+                        rs.getInt("soLuongKhach"),
+                        rs.getString("trangThai"),
+                        rs.getString("ghiChu")
+                );
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

@@ -1,30 +1,85 @@
 package quanlynhahang.dao;
 
 import quanlynhahang.dto.KhachHangDTO;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 
-public class KhachHangDAO {
+public class KhachHangDAO implements IDAO<KhachHangDTO, String> {
 
-    // 1. LẤY DANH SÁCH KHÁCH HÀNG
+    @Override
+    public boolean insert(KhachHangDTO obj) {
+        String sql = "INSERT INTO KhachHang (maKhachHang, maHang, tenKH, soDienThoai, tongChiTieu, ngayDangKy, trangThai) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, obj.getMaKhachHang());
+            ps.setString(2, obj.getMaHang());
+            ps.setString(3, obj.getTenKH());
+            ps.setString(4, obj.getSoDienThoai());
+            ps.setDouble(5, obj.getTongChiTieu());
+            // Chuyển từ java.util.Date sang java.sql.Date để lưu vào SQL
+            ps.setDate(6, new java.sql.Date(obj.getNgayDangKy().getTime()));
+            ps.setBoolean(7, obj.isTrangThai());
+
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    @Override
+    public boolean update(KhachHangDTO obj) {
+        String sql = "UPDATE KhachHang SET maHang = ?, tenKH = ?, soDienThoai = ?, tongChiTieu = ?, ngayDangKy = ?, trangThai = ? WHERE maKhachHang = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, obj.getMaHang());
+            ps.setString(2, obj.getTenKH());
+            ps.setString(3, obj.getSoDienThoai());
+            ps.setDouble(4, obj.getTongChiTieu());
+            ps.setDate(5, new java.sql.Date(obj.getNgayDangKy().getTime()));
+            ps.setBoolean(6, obj.isTrangThai());
+            ps.setString(7, obj.getMaKhachHang());
+
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    @Override
+    public boolean delete(String key) {
+        // Thực hiện xóa mềm bằng cách cập nhật trangThai = false để giữ lịch sử hóa đơn
+        String sql = "UPDATE KhachHang SET trangThai = 0 WHERE maKhachHang = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, key);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    @Override
     public ArrayList<KhachHangDTO> getAll() {
         ArrayList<KhachHangDTO> list = new ArrayList<>();
-        String sql = "SELECT * FROM KhachHang";
+        String sql = "SELECT * FROM KhachHang WHERE trangThai = 1";
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+
             while (rs.next()) {
                 list.add(new KhachHangDTO(
-                        rs.getString("MaKhachHang"),
-                        rs.getString("MaHang"),
-                        rs.getString("TenKH"),
-                        rs.getString("SoDienThoai"),
-                        rs.getDouble("TongChiTieu"),
-                        rs.getDate("NgayDangKy"), // Dùng java.sql.Date
-                        rs.getInt("TrangThai") == 1
+                        rs.getString("maKhachHang"),
+                        rs.getString("maHang"),
+                        rs.getString("tenKH"),
+                        rs.getString("soDienThoai"),
+                        rs.getDouble("tongChiTieu"),
+                        rs.getDate("ngayDangKy"),
+                        rs.getBoolean("trangThai")
                 ));
             }
         } catch (SQLException e) {
@@ -33,40 +88,24 @@ public class KhachHangDAO {
         return list;
     }
 
-    // 2. THÊM KHÁCH HÀNG MỚI (Dành cho chức năng Đăng ký thẻ thành viên)
-    public boolean insert(KhachHangDTO kh) {
-        String sql = "INSERT INTO KhachHang (MaKhachHang, MaHang, TenKH, SoDienThoai, TongChiTieu, TrangThai) VALUES (?, ?, ?, ?, ?, ?)";
+    @Override
+    public KhachHangDTO getById(String key) {
+        String sql = "SELECT * FROM KhachHang WHERE maKhachHang = ? OR soDienThoai = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, kh.getMaKhachHang());
-            ps.setString(2, kh.getMaHang()); // Mặc định thường là H01 (Thành viên Đồng)
-            ps.setString(3, kh.getTenKH());
-            ps.setString(4, kh.getSoDienThoai());
-            ps.setDouble(5, kh.getTongChiTieu());
-            ps.setInt(6, kh.isTrangThai() ? 1 : 0);
-            return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.err.println("Lỗi thêm khách: Trùng số điện thoại hoặc mã KH!");
-            return false;
-        }
-    }
 
-    // 3. TÌM KHÁCH BẰNG SỐ ĐIỆN THOẠI (Lúc thanh toán hỏi số điện thoại để tích điểm)
-    public KhachHangDTO timKhachHangTheoSDT(String sdt) {
-        String sql = "SELECT * FROM KhachHang WHERE SoDienThoai = ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, sdt);
+            ps.setString(1, key);
+            ps.setString(2, key);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 return new KhachHangDTO(
-                        rs.getString("MaKhachHang"),
-                        rs.getString("MaHang"),
-                        rs.getString("TenKH"),
-                        rs.getString("SoDienThoai"),
-                        rs.getDouble("TongChiTieu"),
-                        rs.getDate("NgayDangKy"),
-                        rs.getInt("TrangThai") == 1
+                        rs.getString("maKhachHang"),
+                        rs.getString("maHang"),
+                        rs.getString("tenKH"),
+                        rs.getString("soDienThoai"),
+                        rs.getDouble("tongChiTieu"),
+                        rs.getDate("ngayDangKy"),
+                        rs.getBoolean("trangThai")
                 );
             }
         } catch (SQLException e) {

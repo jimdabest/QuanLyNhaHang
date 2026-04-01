@@ -11,7 +11,7 @@ public class KhachHangDTO {
     private Date ngayDangKy;
     private boolean trangThai;
 
-    public KhachHangDTO() {
+    public KhachHangDTO(String maKhachHang, String tenKhachHang, String soDienThoai, double tongChiTieu, int diemHienTai, String maHang) {
     }
 
     public KhachHangDTO(String maKhachHang, String maHang, String tenKH, String soDienThoai, double tongChiTieu, Date ngayDangKy, boolean trangThai) {

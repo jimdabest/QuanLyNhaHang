@@ -1,52 +1,136 @@
 package quanlynhahang.dao;
 
-import java.sql.CallableStatement;
-import java.sql.Connection;
-import java.sql.SQLException;
+import quanlynhahang.dto.HoaDonDTO;
+import java.sql.*;
+import java.util.ArrayList;
 
-public class HoaDonDAO {
+public class HoaDonDAO implements IDAO<HoaDonDTO, String> {
 
-    // 1. GỌI THỦ TỤC MỞ BÀN (sp_MoBan)
-    public boolean moBanMoi(String maBan, String maKhachHang) {
-        // Cú pháp gọi Stored Procedure trong Java: {call ten_sp(?, ?)}
-        String sql = "{call sp_MoBan(?, ?)}";
+    @Override
+    public boolean insert(HoaDonDTO obj) {
+        // Sử dụng hàm moBan để thực hiện chèn hóa đơn mới thông qua Proc
+        return moBan(obj.getMaBan(), obj.getMaKhachHang());
+    }
 
+    /**
+     * Nghiệp vụ Mở bàn: Gọi Stored Procedure sp_MoBan
+     * SQL tự động: Tạo HD mới + Đổi trạng thái bàn sang 'Đang ăn'
+     */
+    public boolean moBan(String maBan, String maKhachHang) {
+        String sql = "{CALL sp_MoBan(?, ?)}";
         try (Connection conn = DBConnection.getConnection();
              CallableStatement cs = conn.prepareCall(sql)) {
 
             cs.setString(1, maBan);
+            cs.setString(2, maKhachHang); // Có thể để null nếu khách vãng lai
 
-            // Nếu khách vãng lai (không có mã KH), truyền NULL vào SQL
-            if (maKhachHang == null || maKhachHang.trim().isEmpty()) {
-                cs.setNull(2, java.sql.Types.VARCHAR);
-            } else {
-                cs.setString(2, maKhachHang);
-            }
-
-            cs.execute(); // Dùng execute() thay vì executeUpdate() cho SP
-            return true;
-
+            return cs.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Lỗi khi mở bàn: " + e.getMessage());
-            return false;
+            e.printStackTrace();
         }
+        return false;
     }
 
-    // 2. GỌI THỦ TỤC THANH TOÁN (sp_ThanhToanVaTichDiem)
-    public boolean thanhToanHoaDon(String maHoaDon) {
-        String sql = "{call sp_ThanhToanVaTichDiem(?)}";
-
+    /**
+     * Nghiệp vụ Thanh toán: Gọi Stored Procedure sp_ThanhToanVaTichDiem
+     * SQL tự động: Chốt giờ ra, tính điểm, nâng hạng khách, giải phóng bàn
+     */
+    public boolean thanhToan(String maHoaDon) {
+        String sql = "{CALL sp_ThanhToanVaTichDiem(?)}";
         try (Connection conn = DBConnection.getConnection();
              CallableStatement cs = conn.prepareCall(sql)) {
 
             cs.setString(1, maHoaDon);
-            cs.execute();
-            return true;
-
+            return cs.executeUpdate() > 0;
         } catch (SQLException e) {
-            // Nếu SQL Server quăng RAISERROR, nó sẽ chạy vào đây
-            System.err.println("Giao dịch thất bại: " + e.getMessage());
-            return false;
+            e.printStackTrace();
         }
+        return false;
+    }
+
+    @Override
+    public boolean update(HoaDonDTO obj) {
+        String sql = "UPDATE HoaDon SET maBan = ?, maKhachHang = ?, trangThai = ? WHERE maHoaDon = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, obj.getMaBan());
+            ps.setString(2, obj.getMaKhachHang());
+            ps.setString(3, obj.getTrangThai());
+            ps.setString(4, obj.getMaHoaDon());
+
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    @Override
+    public boolean delete(String key) {
+        // Hóa đơn không xóa vật lý để giữ lịch sử báo cáo
+        String sql = "UPDATE HoaDon SET trangThai = N'Đã hủy' WHERE maHoaDon = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, key);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    @Override
+    public ArrayList<HoaDonDTO> getAll() {
+        ArrayList<HoaDonDTO> list = new ArrayList<>();
+        String sql = "SELECT * FROM HoaDon ORDER BY thoiGianVao DESC";
+        try (Connection conn = DBConnection.getConnection();
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+
+            while (rs.next()) {
+                list.add(new HoaDonDTO(
+                        rs.getString("maHoaDon"),
+                        rs.getString("maBan"),
+                        rs.getString("maKhachHang"),
+                        rs.getTimestamp("thoiGianVao"),
+                        rs.getTimestamp("thoiGianRa"),
+                        rs.getDouble("tongTien"),
+                        rs.getDouble("tienGiamGia"),
+                        rs.getDouble("thanhTien"),
+                        rs.getString("trangThai")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    @Override
+    public HoaDonDTO getById(String key) {
+        String sql = "SELECT * FROM HoaDon WHERE maHoaDon = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, key);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return new HoaDonDTO(
+                        rs.getString("maHoaDon"),
+                        rs.getString("maBan"),
+                        rs.getString("maKhachHang"),
+                        rs.getTimestamp("thoiGianVao"),
+                        rs.getTimestamp("thoiGianRa"),
+                        rs.getDouble("tongTien"),
+                        rs.getDouble("tienGiamGia"),
+                        rs.getDouble("thanhTien"),
+                        rs.getString("trangThai")
+                );
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }
