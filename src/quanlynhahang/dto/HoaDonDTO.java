@@ -1,5 +1,6 @@
 package quanlynhahang.dto;
 
+import java.sql.Timestamp;
 import java.util.Date;
 
 public class HoaDonDTO {
@@ -17,7 +18,7 @@ public class HoaDonDTO {
     // ALT + Insert
 
 
-    public HoaDonDTO() {
+    public HoaDonDTO(String maHoaDon, Timestamp thoiGianVao, Timestamp thoiGianRa, double tongTien, String maBan, String maKH, String trangThai) {
     }
 
     public HoaDonDTO(String maHoaDon, String maBan, String maKhachHang, Date thoiGianVao, Date thoiGianRa, double tongTien, double tienGiamGia, double thanhTien, String trangThai) {
