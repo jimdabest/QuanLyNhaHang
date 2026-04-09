@@ -31,3 +31,12 @@ bin/
 
 .idea/
 *.iml
+
+# Build và IDE
+out/
+production/
+repomix-output.xml
+QuanLyNhaHang.iml
+
+# Cấu hình môi trường riêng tư
+.env

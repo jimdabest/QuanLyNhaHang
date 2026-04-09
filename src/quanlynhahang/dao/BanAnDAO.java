@@ -4,8 +4,17 @@ import quanlynhahang.dto.BanAnDTO;
 import java.sql.*;
 import java.util.ArrayList;
 
+/**
+ * DAO thực hiện truy vấn CRUD cho bảng BanAn.
+ * Chịu trách nhiệm ghi nhận, chỉnh sửa và xóa dữ liệu bàn ăn trong database.
+ */
 public class BanAnDAO implements IDAO<BanAnDTO, String> {
 
+    /**
+     * Thêm bàn ăn mới vào bảng BanAn.
+     * @param obj đối tượng BanAnDTO chứa dữ liệu bàn ăn
+     * @return true nếu thêm thành công, false nếu có lỗi
+     */
     @Override
     public boolean insert(BanAnDTO obj) {
         String sql = "INSERT INTO BanAn (maBan, tenBan, sucChua, khuVuc, trangThai) VALUES (?, ?, ?, ?, ?)";
@@ -25,6 +34,11 @@ public class BanAnDAO implements IDAO<BanAnDTO, String> {
         return false;
     }
 
+    /**
+     * Cập nhật thông tin bàn ăn trong cơ sở dữ liệu.
+     * @param obj đối tượng BanAnDTO chứa dữ liệu mới
+     * @return true nếu cập nhật thành công, false nếu thất bại
+     */
     @Override
     public boolean update(BanAnDTO obj) {
         String sql = "UPDATE BanAn SET tenBan = ?, sucChua = ?, khuVuc = ?, trangThai = ? WHERE maBan = ?";
@@ -44,6 +58,12 @@ public class BanAnDAO implements IDAO<BanAnDTO, String> {
         return false;
     }
 
+    /**
+     * Xóa bàn ăn theo mã bàn.
+     * Lưu ý DAO chỉ thực hiện xóa vật lý, BUS cần đảm bảo không xóa bàn đang có khách.
+     * @param key mã bàn cần xóa
+     * @return true nếu xóa thành công, false nếu thất bại
+     */
     @Override
     public boolean delete(String key) {
         // Lưu ý: BUS nên chặn không cho xóa nếu bàn đang có trạng thái "Đang ăn"
@@ -60,6 +80,10 @@ public class BanAnDAO implements IDAO<BanAnDTO, String> {
         return false;
     }
 
+    /**
+     * Lấy toàn bộ danh sách bàn ăn từ bảng BanAn.
+     * @return danh sách BanAnDTO
+     */
     @Override
     public ArrayList<BanAnDTO> getAll() {
         ArrayList<BanAnDTO> list = new ArrayList<>();
@@ -84,6 +108,11 @@ public class BanAnDAO implements IDAO<BanAnDTO, String> {
         return list;
     }
 
+    /**
+     * Lấy thông tin bàn ăn theo mã bàn.
+     * @param key mã bàn cần tìm
+     * @return BanAnDTO nếu tìm thấy, null nếu không
+     */
     @Override
     public BanAnDTO getById(String key) {
         String sql = "SELECT * FROM BanAn WHERE maBan = ?";

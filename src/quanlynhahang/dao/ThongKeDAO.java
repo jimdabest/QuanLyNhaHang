@@ -9,11 +9,17 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
+/**
+ * DAO phục vụ báo cáo và thống kê.
+ * Lấy dữ liệu tổng hợp phục vụ màn hình tính tiền và báo cáo doanh thu.
+ */
 public class ThongKeDAO {
 
-    // =========================================================================
-    // 1. LẤY CHI TIẾT BÀN ĐANG SỬ DỤNG (Phục vụ cho màn hình Tính tiền - Order)
-    // =========================================================================
+    /**
+     * Lấy thông tin chi tiết của bàn đang sử dụng từ view v_ChiTietBanDangDung.
+     * @param maBan mã bàn cần lấy chi tiết
+     * @return ChiTietBanDangDungDTO nếu bàn đang có khách, null nếu không
+     */
     public ChiTietBanDangDungDTO getChiTietBanDangAn(String maBan) {
         ChiTietBanDangDungDTO dto = null;
         String sql = "SELECT * FROM v_ChiTietBanDangDung WHERE MaBan = ?";
@@ -46,9 +52,10 @@ public class ThongKeDAO {
         return dto;
     }
 
-    // =========================================================================
-    // 2. LẤY BÁO CÁO DOANH THU CÁC MÓN (Phục vụ cho màn hình Báo Cáo)
-    // =========================================================================
+    /**
+     * Lấy báo cáo doanh thu theo món từ view v_DoanhThuTheoMon.
+     * @return danh sách DoanhThuMonDTO sắp xếp theo doanh thu giảm dần
+     */
     public ArrayList<DoanhThuMonDTO> layDoanhThuCacMon() {
         ArrayList<DoanhThuMonDTO> danhSach = new ArrayList<>();
         String sql = "SELECT * FROM v_DoanhThuTheoMon ORDER BY TongDoanhThu DESC";
