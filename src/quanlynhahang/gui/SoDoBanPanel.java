@@ -1,15 +1,22 @@
 package quanlynhahang.gui;
 
+import quanlynhahang.bus.HoaDonBUS;
 import quanlynhahang.dao.BanAnDAO;
-import quanlynhahang.dao.HoaDonDAO;
 import quanlynhahang.dto.BanAnDTO;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 
+/**
+ * Panel hiển thị sơ đồ bàn ăn trực tuyến.
+ * Cho phép nhân viên xem trạng thái bàn và mở bàn mới.
+ */
 public class SoDoBanPanel extends JPanel {
 
+    /**
+     * Panel chứa các nút biểu diễn từng bàn.
+     */
     private JPanel pnlTables;
 
     public SoDoBanPanel() {
@@ -67,7 +74,10 @@ public class SoDoBanPanel extends JPanel {
     // CÁC HÀM XỬ LÝ LOGIC
     // ==========================================
 
-    // Hàm 1: Load dữ liệu từ Database và vẽ ra các nút bấm
+    /**
+     * Tải dữ liệu bàn từ cơ sở dữ liệu và tạo các nút hiển thị sơ đồ bàn.
+     * Mỗi nút sẽ có màu sắc tương ứng với trạng thái bàn.
+     */
     public void loadSoDoBan() {
         pnlTables.removeAll(); // Xóa sạch các bàn cũ trên màn hình
 
@@ -119,8 +129,9 @@ public class SoDoBanPanel extends JPanel {
                             "Xác nhận Mở Bàn", JOptionPane.YES_NO_OPTION);
 
                     if (confirm == JOptionPane.YES_OPTION) {
-                        // Gọi SP mở bàn (Khách vãng lai truyền null)
-                        if (new HoaDonDAO().moBanMoi(ban.getMaBan(), null)) {
+                        // Gọi SP mở bàn thông qua HoaDonBUS (Chuẩn mô hình 3 lớp)
+                        HoaDonBUS hdBUS = new HoaDonBUS();
+                        if (hdBUS.moBanMoi(ban.getMaBan(), null)) {
                             JOptionPane.showMessageDialog(this, "✅ Mở bàn thành công! Chuyển sang Gọi món.");
                             loadSoDoBan(); // Làm mới lại sơ đồ để bàn chuyển sang màu Đỏ
 
@@ -146,7 +157,21 @@ public class SoDoBanPanel extends JPanel {
         pnlTables.repaint();
     }
 
-    // Hàm 2: Tạo ô chú thích màu sắc ở dưới cùng
+    /**
+     * Placeholder cho hành động mở bàn từ panel sơ đồ bàn.
+     * Hàm có thể được mở rộng để tích hợp trực tiếp với giao diện gọi món.
+     * @param maBan mã bàn được mở
+     */
+    public void openTable(String maBan) {
+        System.out.println("Mở bàn gọi món: " + maBan);
+    }
+
+    /**
+     * Tạo panel chú thích trạng thái bàn với một ô màu và nhãn.
+     * @param text nhãn trạng thái
+     * @param color màu của trạng thái
+     * @return JPanel chứa chú thích
+     */
     private JPanel taoChuThich(String text, Color color) {
         JPanel pnl = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         pnl.setBackground(new Color(241, 245, 249));

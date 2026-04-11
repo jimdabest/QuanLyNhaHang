@@ -1,10 +1,29 @@
 package quanlynhahang.dto;
 
+/**
+ * DTO phục vụ báo cáo doanh thu theo từng món.
+ * Lưu lượng bán và doanh thu để tổng hợp báo cáo bán hàng.
+ */
 public class DoanhThuMonDTO {
+    /**
+     * Mã món ăn.
+     */
     private String maMon;
+    /**
+     * Tên món ăn.
+     */
     private String tenMon;
+    /**
+     * Phân loại món để phân tích theo nhóm.
+     */
     private String phanLoai;
+    /**
+     * Tổng số lượng món đã bán.
+     */
     private int tongSoLuongBan;
+    /**
+     * Tổng doanh thu tạo ra từ món này.
+     */
     private double tongDoanhThu;
 
     // Khởi tạo Constructor (Không tham số)

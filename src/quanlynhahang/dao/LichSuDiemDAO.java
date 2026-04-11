@@ -4,8 +4,17 @@ import quanlynhahang.dto.LichSuDiemDTO;
 import java.sql.*;
 import java.util.ArrayList;
 
+/**
+ * DAO ghi lại lịch sử giao dịch điểm thưởng của khách hàng.
+ * Quản lý thêm và truy vấn bảng LichSuDiem.
+ */
 public class LichSuDiemDAO implements IDAO<LichSuDiemDTO, String> {
 
+    /**
+     * Thêm bản ghi lịch sử điểm mới.
+     * @param obj đối tượng LichSuDiemDTO chứa dữ liệu giao dịch điểm
+     * @return true nếu thêm thành công, false nếu thất bại
+     */
     @Override
     public boolean insert(LichSuDiemDTO obj) {
         String sql = "INSERT INTO LichSuDiem (maGiaoDich, maKhachHang, maHoaDon, loaiGiaoDich, soDiemThayDoi, thoiGianGiaoDich, ghiChu) VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -28,6 +37,11 @@ public class LichSuDiemDAO implements IDAO<LichSuDiemDTO, String> {
         return false;
     }
 
+    /**
+     * Cập nhật ghi chú của một giao dịch điểm nếu cần.
+     * @param obj đối tượng LichSuDiemDTO chứa dữ liệu cập nhật
+     * @return true nếu cập nhật thành công, false nếu thất bại
+     */
     @Override
     public boolean update(LichSuDiemDTO obj) {
         // Thông thường lịch sử giao dịch không nên cho sửa.
@@ -44,12 +58,21 @@ public class LichSuDiemDAO implements IDAO<LichSuDiemDTO, String> {
         return false;
     }
 
+    /**
+     * Không cho phép xóa bản ghi lịch sử điểm để bảo toàn dữ liệu giao dịch.
+     * @param key khóa chính
+     * @return luôn trả về false trong triển khai hiện tại
+     */
     @Override
     public boolean delete(String key) {
         // Nguyên tắc: Không xóa lịch sử điểm để tránh gian lận
         return false;
     }
 
+    /**
+     * Lấy toàn bộ lịch sử giao dịch điểm.
+     * @return danh sách LichSuDiemDTO
+     */
     @Override
     public ArrayList<LichSuDiemDTO> getAll() {
         ArrayList<LichSuDiemDTO> list = new ArrayList<>();
@@ -75,6 +98,11 @@ public class LichSuDiemDAO implements IDAO<LichSuDiemDTO, String> {
         return list;
     }
 
+    /**
+     * Lấy bản ghi lịch sử điểm theo mã giao dịch.
+     * @param key mã giao dịch cần tìm
+     * @return LichSuDiemDTO nếu tồn tại, null nếu không
+     */
     @Override
     public LichSuDiemDTO getById(String key) {
         String sql = "SELECT * FROM LichSuDiem WHERE maGiaoDich = ?";
@@ -101,8 +129,9 @@ public class LichSuDiemDAO implements IDAO<LichSuDiemDTO, String> {
     }
 
     /**
-     * Hàm bổ sung: Lấy lịch sử điểm của một khách hàng cụ thể
-     * Rất hữu ích để hiển thị trên GUI khi xem chi tiết khách hàng
+     * Lấy toàn bộ lịch sử điểm của một khách hàng.
+     * @param maKhachHang mã khách hàng cần lấy lịch sử
+     * @return danh sách LichSuDiemDTO của khách hàng
      */
     public ArrayList<LichSuDiemDTO> getByKhachHangId(String maKhachHang) {
         ArrayList<LichSuDiemDTO> list = new ArrayList<>();

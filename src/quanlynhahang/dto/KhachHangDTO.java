@@ -2,13 +2,38 @@ package quanlynhahang.dto;
 
 import java.util.Date;
 
+/**
+ * DTO đại diện cho khách hàng của nhà hàng.
+ * Chứa thông tin thẻ thành viên, điểm tích lũy và trạng thái hoạt động.
+ */
 public class KhachHangDTO {
+    /**
+     * Mã khách hàng duy nhất trong hệ thống.
+     */
     private String maKhachHang;
+    /**
+     * Mã hạng thành viên của khách (Bạc, Vàng, Kim Cương,...).
+     */
     private String maHang;
+    /**
+     * Tên khách hàng.
+     */
     private String tenKH;
+    /**
+     * Số điện thoại liên hệ của khách hàng.
+     */
     private String soDienThoai;
+    /**
+     * Tổng chi tiêu đã tích lũy của khách để xác định hạng và ưu đãi.
+     */
     private double tongChiTieu;
+    /**
+     * Ngày khách hàng đăng ký thành viên.
+     */
     private Date ngayDangKy;
+    /**
+     * Trạng thái khách hàng còn hoạt động hay đã bị khoá.
+     */
     private boolean trangThai;
 
     public KhachHangDTO(String maKhachHang, String tenKhachHang, String soDienThoai, double tongChiTieu, int diemHienTai, String maHang) {

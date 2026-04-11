@@ -2,14 +2,42 @@ package quanlynhahang.dto;
 
 import java.util.Date;
 
+/**
+ * DTO đại diện cho phiếu đặt bàn của khách hàng.
+ * Lưu thông tin lịch hẹn, số lượng khách và trạng thái đặt bàn.
+ */
 public class PhieuDatBanDTO {
+    /**
+     * Mã phiếu đặt bàn.
+     */
     private String maDatBan;
+    /**
+     * Mã khách hàng đặt bàn.
+     */
     private String maKhachHang;
+    /**
+     * Mã bàn được đặt.
+     */
     private String maBan;
+    /**
+     * Thời điểm tạo phiếu đặt bàn.
+     */
     private Date thoiGianDat;
+    /**
+     * Thời điểm khách hẹn nhận bàn.
+     */
     private Date thoiGianNhanBan;
+    /**
+     * Số lượng khách dự kiến.
+     */
     private int soLuongKhach;
+    /**
+     * Trạng thái của phiếu đặt bàn.
+     */
     private String trangThai;
+    /**
+     * Ghi chú bổ sung cho yêu cầu đặt bàn.
+     */
     private String ghiChu;
 
     public PhieuDatBanDTO() {

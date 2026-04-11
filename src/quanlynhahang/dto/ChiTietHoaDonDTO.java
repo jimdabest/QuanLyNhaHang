@@ -1,11 +1,29 @@
 package quanlynhahang.dto;
 
+/**
+ * DTO đại diện cho chi tiết một dòng món ăn trong hóa đơn.
+ * Mỗi bản ghi chứa mã món, số lượng, giá bán và ghi chú riêng.
+ */
 public class ChiTietHoaDonDTO {
-    private String maHoaDon; // Không đặt là MaHoaDon hay mahoadon hay ma_hoa_don
-    // Các bạn lưuý đặt tên biến kiểu camelCase nha
+    /**
+     * Mã hóa đơn liên kết với dòng món này.
+     */
+    private String maHoaDon;
+    /**
+     * Mã món ăn.
+     */
     private String maMon;
+    /**
+     * Số lượng món ăn được gọi.
+     */
     private int soLuong;
+    /**
+     * Giá bán áp dụng cho món ăn tại thời điểm gọi.
+     */
     private double giaBan;
+    /**
+     * Ghi chú thêm cho món, ví dụ yêu cầu bỏ rau, thêm đá.
+     */
     private String ghiChu;
 
     // ALT + Insert

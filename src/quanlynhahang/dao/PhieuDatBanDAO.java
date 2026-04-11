@@ -4,8 +4,17 @@ import quanlynhahang.dto.PhieuDatBanDTO;
 import java.sql.*;
 import java.util.ArrayList;
 
+/**
+ * DAO quản lý phiếu đặt bàn.
+ * Thực hiện thao tác thêm, cập nhật và hủy đặt bàn trong database.
+ */
 public class PhieuDatBanDAO implements IDAO<PhieuDatBanDTO, String> {
 
+    /**
+     * Thêm phiếu đặt bàn mới vào bảng PhieuDatBan.
+     * @param obj đối tượng PhieuDatBanDTO chứa dữ liệu phiếu đặt
+     * @return true nếu thêm thành công, false nếu thất bại
+     */
     @Override
     public boolean insert(PhieuDatBanDTO obj) {
         String sql = "INSERT INTO PhieuDatBan (maDatBan, maKhachHang, maBan, thoiGianDat, thoiGianNhanBan, soLuongKhach, trangThai, ghiChu) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
@@ -30,6 +39,11 @@ public class PhieuDatBanDAO implements IDAO<PhieuDatBanDTO, String> {
         return false;
     }
 
+    /**
+     * Cập nhật trạng thái và thông tin phiếu đặt bàn.
+     * @param obj đối tượng PhieuDatBanDTO chứa dữ liệu mới
+     * @return true nếu cập nhật thành công, false nếu thất bại
+     */
     @Override
     public boolean update(PhieuDatBanDTO obj) {
         String sql = "UPDATE PhieuDatBan SET maKhachHang = ?, maBan = ?, thoiGianNhanBan = ?, soLuongKhach = ?, trangThai = ?, ghiChu = ? WHERE maDatBan = ?";
@@ -51,6 +65,11 @@ public class PhieuDatBanDAO implements IDAO<PhieuDatBanDTO, String> {
         return false;
     }
 
+    /**
+     * Hủy phiếu đặt bàn bằng cách cập nhật trạng thái.
+     * @param key mã phiếu đặt bàn cần hủy
+     * @return true nếu cập nhật thành công, false nếu thất bại
+     */
     @Override
     public boolean delete(String key) {
         // Thay vì xóa, thường chúng ta cập nhật trạng thái thành 'Đã hủy'
@@ -65,6 +84,10 @@ public class PhieuDatBanDAO implements IDAO<PhieuDatBanDTO, String> {
         return false;
     }
 
+    /**
+     * Lấy toàn bộ phiếu đặt bàn, sắp xếp theo thời gian nhận bàn.
+     * @return danh sách PhieuDatBanDTO
+     */
     @Override
     public ArrayList<PhieuDatBanDTO> getAll() {
         ArrayList<PhieuDatBanDTO> list = new ArrayList<>();
@@ -91,6 +114,11 @@ public class PhieuDatBanDAO implements IDAO<PhieuDatBanDTO, String> {
         return list;
     }
 
+    /**
+     * Lấy phiếu đặt bàn theo mã.
+     * @param key mã phiếu đặt bàn
+     * @return PhieuDatBanDTO nếu tồn tại, null nếu không
+     */
     @Override
     public PhieuDatBanDTO getById(String key) {
         String sql = "SELECT * FROM PhieuDatBan WHERE maDatBan = ?";

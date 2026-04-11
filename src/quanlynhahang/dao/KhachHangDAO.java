@@ -4,8 +4,17 @@ import quanlynhahang.dto.KhachHangDTO;
 import java.sql.*;
 import java.util.ArrayList;
 
+/**
+ * DAO thực hiện truy vấn cho bảng KhachHang.
+ * Quản lý thêm, sửa, xóa mềm và truy vấn thông tin khách hàng.
+ */
 public class KhachHangDAO implements IDAO<KhachHangDTO, String> {
 
+    /**
+     * Thêm mới khách hàng vào bảng KhachHang.
+     * @param obj đối tượng KhachHangDTO chứa thông tin khách
+     * @return true nếu thêm thành công, false nếu thất bại
+     */
     @Override
     public boolean insert(KhachHangDTO obj) {
         String sql = "INSERT INTO KhachHang (maKhachHang, maHang, tenKH, soDienThoai, tongChiTieu, ngayDangKy, trangThai) VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -28,6 +37,11 @@ public class KhachHangDAO implements IDAO<KhachHangDTO, String> {
         return false;
     }
 
+    /**
+     * Cập nhật thông tin khách hàng.
+     * @param obj đối tượng KhachHangDTO chứa dữ liệu cập nhật
+     * @return true nếu cập nhật thành công, false nếu lỗi
+     */
     @Override
     public boolean update(KhachHangDTO obj) {
         String sql = "UPDATE KhachHang SET maHang = ?, tenKH = ?, soDienThoai = ?, tongChiTieu = ?, ngayDangKy = ?, trangThai = ? WHERE maKhachHang = ?";
@@ -49,6 +63,11 @@ public class KhachHangDAO implements IDAO<KhachHangDTO, String> {
         return false;
     }
 
+    /**
+     * Xóa mềm khách hàng bằng cách cập nhật trạng thái không hoạt động.
+     * @param key mã khách hàng cần xóa
+     * @return true nếu cập nhật thành công, false nếu thất bại
+     */
     @Override
     public boolean delete(String key) {
         // Thực hiện xóa mềm bằng cách cập nhật trangThai = false để giữ lịch sử hóa đơn
@@ -63,6 +82,10 @@ public class KhachHangDAO implements IDAO<KhachHangDTO, String> {
         return false;
     }
 
+    /**
+     * Lấy danh sách khách hàng đang hoạt động.
+     * @return danh sách KhachHangDTO
+     */
     @Override
     public ArrayList<KhachHangDTO> getAll() {
         ArrayList<KhachHangDTO> list = new ArrayList<>();
@@ -88,6 +111,11 @@ public class KhachHangDAO implements IDAO<KhachHangDTO, String> {
         return list;
     }
 
+    /**
+     * Lấy khách hàng theo mã hoặc số điện thoại.
+     * @param key mã khách hàng hoặc số điện thoại
+     * @return KhachHangDTO nếu tìm thấy, null nếu không
+     */
     @Override
     public KhachHangDTO getById(String key) {
         String sql = "SELECT * FROM KhachHang WHERE maKhachHang = ? OR soDienThoai = ?";

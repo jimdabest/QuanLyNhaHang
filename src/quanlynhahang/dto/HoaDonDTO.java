@@ -3,20 +3,47 @@ package quanlynhahang.dto;
 import java.sql.Timestamp;
 import java.util.Date;
 
+/**
+ * DTO đại diện cho hóa đơn thanh toán tại nhà hàng.
+ * Chứa thông tin liên quan đến bàn, khách hàng, thời gian và số tiền.
+ */
 public class HoaDonDTO {
-    // mọi người chú ý đặt tên file theo kiểuc camelCase nhé
-    private String maHoaDon; // Không đặt là MaHoaDon nha
+    /**
+     * Mã hóa đơn duy nhất.
+     */
+    private String maHoaDon;
+    /**
+     * Mã bàn liên kết với hóa đơn.
+     */
     private String maBan;
+    /**
+     * Mã khách hàng nếu khách VIP hoặc thành viên, có thể null cho khách vãng lai.
+     */
     private String maKhachHang;
+    /**
+     * Thời điểm khách vào bàn.
+     */
     private Date thoiGianVao;
+    /**
+     * Thời điểm khách rời bàn khi thanh toán.
+     */
     private Date thoiGianRa;
+    /**
+     * Tổng tiền trước khi áp dụng giảm giá.
+     */
     private double tongTien;
+    /**
+     * Số tiền giảm giá áp dụng cho khách hàng/khuyến mãi.
+     */
     private double tienGiamGia;
+    /**
+     * Số tiền phải thu sau khi đã trừ giảm giá.
+     */
     private double thanhTien;
+    /**
+     * Trạng thái hóa đơn, ví dụ "Chưa TT", "Đã TT".
+     */
     private String trangThai;
-
-    // ALT + Insert
-
 
     public HoaDonDTO(String maHoaDon, Timestamp thoiGianVao, Timestamp thoiGianRa, double tongTien, String maBan, String maKH, String trangThai) {
     }

@@ -1,10 +1,29 @@
 package quanlynhahang.dto;
 
+/**
+ * DTO lưu trữ thông tin món ăn trong thực đơn.
+ * Dùng trong quản lý món, gọi món và báo cáo doanh thu.
+ */
 public class MonAnDTO {
+    /**
+     * Mã định danh món ăn.
+     */
     private String maMon;
+    /**
+     * Tên của món ăn.
+     */
     private String tenMon;
+    /**
+     * Phân loại món (ví dụ: Thịt nướng, Hải sản, Nước uống).
+     */
     private String phanLoai;
+    /**
+     * Giá hiện tại tính theo VNĐ.
+     */
     private double giaHienTai;
+    /**
+     * Trạng thái món ăn có còn phục vụ hay đã ngừng bán.
+     */
     private boolean trangThaiPhucVu;
 
     public MonAnDTO() {

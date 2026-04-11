@@ -4,8 +4,17 @@ import quanlynhahang.dto.MonAnDTO;
 import java.sql.*;
 import java.util.ArrayList;
 
+/**
+ * DAO quản lý truy vấn cho bảng MonAn.
+ * Thực hiện thêm, cập nhật, ngừng phục vụ và truy vấn thực đơn.
+ */
 public class MonAnDAO implements IDAO<MonAnDTO, String> {
 
+    /**
+     * Thêm món ăn mới vào bảng MonAn.
+     * @param obj đối tượng MonAnDTO chứa dữ liệu món
+     * @return true nếu thêm thành công, false nếu thất bại
+     */
     @Override
     public boolean insert(MonAnDTO obj) {
         String sql = "INSERT INTO MonAn (maMon, tenMon, phanLoai, giaHienTai, trangThaiPhucVu) VALUES (?, ?, ?, ?, ?)";
@@ -25,6 +34,11 @@ public class MonAnDAO implements IDAO<MonAnDTO, String> {
         return false;
     }
 
+    /**
+     * Cập nhật thông tin món ăn.
+     * @param obj đối tượng MonAnDTO chứa dữ liệu mới
+     * @return true nếu cập nhật thành công, false nếu thất bại
+     */
     @Override
     public boolean update(MonAnDTO obj) {
         String sql = "UPDATE MonAn SET tenMon = ?, phanLoai = ?, giaHienTai = ?, trangThaiPhucVu = ? WHERE maMon = ?";
@@ -44,6 +58,12 @@ public class MonAnDAO implements IDAO<MonAnDTO, String> {
         return false;
     }
 
+    /**
+     * Ngừng phục vụ món ăn bằng cách cập nhật trạng thái.
+     * Không xóa vật lý để tránh lỗi khóa ngoại với ChiTietHoaDon.
+     * @param key mã món cần ngừng phục vụ
+     * @return true nếu cập nhật thành công, false nếu thất bại
+     */
     @Override
     public boolean delete(String key) {
         // Nguyên tắc: Không xóa món ăn khỏi DB để tránh lỗi khóa ngoại với ChiTietHoaDon
@@ -60,6 +80,10 @@ public class MonAnDAO implements IDAO<MonAnDTO, String> {
         return false;
     }
 
+    /**
+     * Lấy danh sách tất cả món ăn.
+     * @return danh sách MonAnDTO
+     */
     @Override
     public ArrayList<MonAnDTO> getAll() {
         ArrayList<MonAnDTO> list = new ArrayList<>();
@@ -83,6 +107,11 @@ public class MonAnDAO implements IDAO<MonAnDTO, String> {
         return list;
     }
 
+    /**
+     * Lấy món ăn theo mã món.
+     * @param key mã món cần tìm
+     * @return MonAnDTO nếu tìm thấy, null nếu không tồn tại
+     */
     @Override
     public MonAnDTO getById(String key) {
         String sql = "SELECT * FROM MonAn WHERE maMon = ?";
@@ -107,9 +136,27 @@ public class MonAnDAO implements IDAO<MonAnDTO, String> {
     }
 
     /**
+     * Ngừng phục vụ món ăn bằng cách cập nhật cột TrangThaiPhucVu.
+     * @param maMon mã món cần chuyển sang trạng thái ngừng phục vụ
+     * @return true nếu cập nhật thành công, false nếu thất bại
+     */
+    public boolean xoaMem(String maMon) {
+        String sql = "UPDATE MonAn SET TrangThaiPhucVu = 0 WHERE MaMon = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, maMon);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    /**
      * Hàm bổ sung: Lấy danh sách món theo phân loại (Khai vị, Món chính, Nước uống...)
      * Rất hữu ích cho việc lọc món trên giao diện bán hàng
-     */
+     
     public ArrayList<MonAnDTO> getByPhanLoai(String loai) {
         ArrayList<MonAnDTO> list = new ArrayList<>();
         String sql = "SELECT * FROM MonAn WHERE phanLoai = ? AND trangThaiPhucVu = 1";
