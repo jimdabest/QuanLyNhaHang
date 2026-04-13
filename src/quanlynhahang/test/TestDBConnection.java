@@ -1,6 +1,7 @@
 package quanlynhahang.test;
 
-import quanlynhahang.dao.DBConnection;
+import
+        quanlynhahang.dao.DBConnection;
 import java.sql.Connection;
 
 public class TestDBConnection {
