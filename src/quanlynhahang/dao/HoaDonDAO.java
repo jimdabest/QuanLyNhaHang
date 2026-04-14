@@ -4,19 +4,30 @@ import quanlynhahang.dto.HoaDonDTO;
 import java.sql.*;
 import java.util.ArrayList;
 
+/**
+ * DAO quản lý hóa đơn và các thao tác liên quan đến bảng HoaDon.
+ * Hỗ trợ thao tác CRUD và gọi stored procedure liên quan đến mở bàn, thanh toán.
+ */
 public class HoaDonDAO implements IDAO<HoaDonDTO, String> {
 
+    /**
+     * Thêm hóa đơn mới vào hệ thống.
+     * Hàm này giao tiếp với stored procedure để mở bàn và khởi tạo hóa đơn.
+     * @param obj đối tượng HoaDonDTO chứa thông tin hóa đơn cần tạo
+     * @return true nếu thêm thành công, false nếu thất bại
+     */
     @Override
     public boolean insert(HoaDonDTO obj) {
-        // Sử dụng hàm moBan để thực hiện chèn hóa đơn mới thông qua Proc
-        return moBan(obj.getMaBan(), obj.getMaKhachHang());
+        return moBanMoi(obj.getMaBan(), obj.getMaKhachHang());
     }
 
     /**
-     * Nghiệp vụ Mở bàn: Gọi Stored Procedure sp_MoBan
-     * SQL tự động: Tạo HD mới + Đổi trạng thái bàn sang 'Đang ăn'
+     * Nghiệp vụ mở bàn bằng stored procedure sp_MoBan.
+     * @param maBan mã bàn cần mở
+     * @param maKhachHang mã khách hàng nếu có, có thể null cho khách vãng lai
+     * @return true nếu mở bàn thành công, false nếu thất bại
      */
-    public boolean moBan(String maBan, String maKhachHang) {
+    public boolean moBanMoi(String maBan, String maKhachHang) {
         String sql = "{CALL sp_MoBan(?, ?)}";
         try (Connection conn = DBConnection.getConnection();
              CallableStatement cs = conn.prepareCall(sql)) {
@@ -32,10 +43,12 @@ public class HoaDonDAO implements IDAO<HoaDonDTO, String> {
     }
 
     /**
-     * Nghiệp vụ Thanh toán: Gọi Stored Procedure sp_ThanhToanVaTichDiem
-     * SQL tự động: Chốt giờ ra, tính điểm, nâng hạng khách, giải phóng bàn
+     * Nghiệp vụ thanh toán hóa đơn bằng stored procedure sp_ThanhToanVaTichDiem.
+     * Stored procedure này chịu trách nhiệm chốt time-out, tính điểm tích lũy và giải phóng bàn.
+     * @param maHoaDon mã hóa đơn cần thanh toán
+     * @return true nếu thanh toán thành công, false nếu có lỗi
      */
-    public boolean thanhToan(String maHoaDon) {
+    public boolean thanhToanHoaDon(String maHoaDon) {
         String sql = "{CALL sp_ThanhToanVaTichDiem(?)}";
         try (Connection conn = DBConnection.getConnection();
              CallableStatement cs = conn.prepareCall(sql)) {
@@ -48,6 +61,11 @@ public class HoaDonDAO implements IDAO<HoaDonDTO, String> {
         return false;
     }
 
+    /**
+     * Cập nhật thông tin cơ bản của hóa đơn.
+     * @param obj đối tượng HoaDonDTO chứa dữ liệu cần cập nhật
+     * @return true nếu cập nhật thành công, false nếu thất bại
+     */
     @Override
     public boolean update(HoaDonDTO obj) {
         String sql = "UPDATE HoaDon SET maBan = ?, maKhachHang = ?, trangThai = ? WHERE maHoaDon = ?";
@@ -66,6 +84,12 @@ public class HoaDonDAO implements IDAO<HoaDonDTO, String> {
         return false;
     }
 
+    /**
+     * Hủy hóa đơn bằng cách cập nhật trạng thái thành "Đã hủy".
+     * Không xóa vật lý để giữ lịch sử giao dịch và báo cáo.
+     * @param key mã hóa đơn cần hủy
+     * @return true nếu cập nhật thành công, false nếu thất bại
+     */
     @Override
     public boolean delete(String key) {
         // Hóa đơn không xóa vật lý để giữ lịch sử báo cáo
@@ -80,6 +104,10 @@ public class HoaDonDAO implements IDAO<HoaDonDTO, String> {
         return false;
     }
 
+    /**
+     * Lấy toàn bộ hóa đơn, sắp xếp theo thời gian vào giảm dần.
+     * @return danh sách HoaDonDTO
+     */
     @Override
     public ArrayList<HoaDonDTO> getAll() {
         ArrayList<HoaDonDTO> list = new ArrayList<>();
@@ -107,6 +135,11 @@ public class HoaDonDAO implements IDAO<HoaDonDTO, String> {
         return list;
     }
 
+    /**
+     * Lấy hóa đơn theo mã hóa đơn.
+     * @param key mã hóa đơn cần lấy
+     * @return HoaDonDTO nếu tồn tại, null nếu không
+     */
     @Override
     public HoaDonDTO getById(String key) {
         String sql = "SELECT * FROM HoaDon WHERE maHoaDon = ?";

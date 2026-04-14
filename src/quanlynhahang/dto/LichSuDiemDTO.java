@@ -2,13 +2,38 @@ package quanlynhahang.dto;
 
 import java.util.Date;
 
+/**
+ * DTO ghi lại lịch sử giao dịch điểm thưởng của khách hàng.
+ * Dùng để truy vấn điểm tích luỹ, đổi điểm hoặc hoàn tiền.
+ */
 public class LichSuDiemDTO {
+    /**
+     * Mã giao dịch điểm duy nhất.
+     */
     private String maGiaoDich;
+    /**
+     * Mã khách hàng tham gia giao dịch.
+     */
     private String maKhachHang;
+    /**
+     * Mã hóa đơn liên quan đến giao dịch điểm.
+     */
     private String maHoaDon;
+    /**
+     * Loại giao dịch điểm, ví dụ "Tích điểm" hay "Đổi điểm".
+     */
     private String loaiGiaoDich;
+    /**
+     * Số điểm thay đổi trong giao dịch.
+     */
     private int soDiemThayDoi;
+    /**
+     * Thời gian thực hiện giao dịch.
+     */
     private Date thoiGianGiaoDich;
+    /**
+     * Ghi chú bổ sung cho giao dịch điểm.
+     */
     private String ghiChu;
 
     public LichSuDiemDTO() {

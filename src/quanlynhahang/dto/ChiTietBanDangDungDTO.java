@@ -2,15 +2,46 @@ package quanlynhahang.dto;
 
 import java.sql.Timestamp;
 
+/**
+ * DTO chứa thông tin tổng quát của bàn đang sử dụng.
+ * Dùng để hiển thị trạng thái phòng bàn và hóa đơn đang mở.
+ */
 public class ChiTietBanDangDungDTO {
+    /**
+     * Mã bàn hiện tại.
+     */
     private String maBan;
+    /**
+     * Tên hiển thị của bàn.
+     */
     private String tenBan;
+    /**
+     * Khu vực bàn đang nằm.
+     */
     private String khuVuc;
+    /**
+     * Mã hóa đơn đang áp dụng cho bàn này.
+     */
     private String maHoaDon;
+    /**
+     * Tên khách hàng liên kết với hóa đơn nếu có.
+     */
     private String tenKhachHang;
-    private Timestamp thoiGianVao; // Dùng Timestamp để lưu cả ngày lẫn giờ phút giây
+    /**
+     * Thời điểm khách vào bàn (Timestamp bao gồm cả giờ và phút).
+     */
+    private Timestamp thoiGianVao;
+    /**
+     * Tổng tiền trước khi giảm giá.
+     */
     private double tongTien;
+    /**
+     * Số tiền giảm giá đã áp dụng.
+     */
     private double tienGiamGia;
+    /**
+     * Tổng tiền tạm tính sau khi đã áp dụng giảm giá.
+     */
     private double thanhTienTamTinh;
 
     // Khởi tạo Constructor (Không tham số)
