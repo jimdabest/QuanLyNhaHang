@@ -102,29 +102,3 @@ $sources = Get-ChildItem -Recurse -Path src -Filter *.java | ForEach-Object { $_
 ```powershell
 & 'C:\Program Files\Eclipse Adoptium\jdk-17.0.18.8-hotspot\bin\java.exe' -cp "out;lib/*" quanlynhahang.gui.MainFrame
 ```
-
-## 6. Luong su dung nhanh
-
-1. Vao So do ban de chon ban.
-2. Neu ban trong: mo ban ngay hoac dat ban.
-3. Vao Goi mon de them mon vao hoa don ban dang mo.
-4. Thanh toan tai khu vuc bill ben phai (chi hien khi dang order).
-5. Vao Cai dat de:
-
-- Quan ly menu
-- Quan ly khach hang va hang thanh vien
-- Quan ly ban
-
-6. Vao Thong ke de xem doanh thu theo mon.
-
-## 7. Ghi chu van hanh
-
-- Trang thai ban duoc dong bo boi ca Java va SQL logic.
-- Khi cap nhat trigger/procedure, can deploy lai len database dang su dung.
-- Neu gap loi ket noi, kiem tra lai .env va cong SQL Server.
-
-## 8. Dinh huong cai tien
-
-- Bo sung bo loc thong ke theo ngay, tuan, thang.
-- Bo sung tim kiem nhanh o danh sach khach hang.
-- Viet test cho cac nghiep vu thanh toan, dat ban, cap nhat trang thai ban.
