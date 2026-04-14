@@ -34,8 +34,6 @@ public class ThucDonPanel extends JPanel {
     private JButton btnXoa;
     private JButton btnLamMoi;
     private JButton btnOrder;
-    private boolean quanLyMenuMode = false;
-
     /**
      * Khởi tạo giao diện ThucDonPanel với đầy đủ tính năng.
      */
@@ -299,8 +297,6 @@ public class ThucDonPanel extends JPanel {
      * true: hiển thị đầy đủ chức năng quản lý menu.
      */
     public void setQuanLyMenuMode(boolean enable) {
-        this.quanLyMenuMode = enable;
-
         lblTitle.setText(enable ? "QUẢN LÝ THỰC ĐƠN" : "GỌI MÓN");
 
         capNhatGiaoDienTheoMode(enable);
