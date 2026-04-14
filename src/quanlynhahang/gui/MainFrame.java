@@ -20,6 +20,8 @@ import java.util.ArrayList;
  */
 public class MainFrame extends JFrame {
 
+    private static final int DEFAULT_DIVIDER_LOCATION = 850;
+
     /**
      * Panel tổng chứa các màn hình chức năng (Sơ đồ bàn, Đặt bàn, Thực đơn).
      */
@@ -45,6 +47,26 @@ public class MainFrame extends JFrame {
      */
     private DatBanPanel datBanPanel;
 
+    /**
+     * Panel cài đặt, chứa các lối vào chức năng quản trị như khách hàng và menu.
+     */
+    private JPanel caiDatPanel;
+
+    /**
+     * Panel quản lý bàn ăn dùng cho thêm, xóa, sửa thuộc tính bàn.
+     */
+    private QuanLyBanPanel quanLyBanPanel;
+
+    /**
+     * Panel thống kê doanh thu theo món.
+     */
+    private ThongKePanel thongKePanel;
+
+    /**
+     * Panel tạo mới khách hàng phục vụ luồng đặt bàn.
+     */
+    private KhachHangPanel khachHangPanel;
+
     // --- COMPONENTS BÊN PHẢI (BILL) ---
     /**
      * Nhãn hiển thị tên bàn đang được thao tác hiện tại.
@@ -62,6 +84,11 @@ public class MainFrame extends JFrame {
     private JTable billTable;
 
     /**
+     * Danh sách chi tiết hóa đơn đang hiển thị trên bảng bill.
+     */
+    private ArrayList<ChiTietHoaDonDTO> currentBillItems = new ArrayList<>();
+
+    /**
      * Nhãn hiển thị tổng số tiền của hóa đơn đang mở.
      */
     private JLabel lblTotal;
@@ -70,6 +97,9 @@ public class MainFrame extends JFrame {
      * Nút bấm thực hiện chức năng chốt và thanh toán hóa đơn.
      */
     private JButton btnThanhToan;
+
+    private JSplitPane splitPane;
+    private JPanel rightBillPanel;
 
     // --- BIẾN LƯU TRẠNG THÁI HIỆN TẠI ---
     /**
@@ -81,6 +111,11 @@ public class MainFrame extends JFrame {
      * Lưu trữ mã hóa đơn liên kết với bàn đang được chọn (nếu có).
      */
     protected String currentMaHoaDon = null;
+
+    /**
+     * SĐT đang chờ xử lý trong luồng thanh toán sau khi tạo khách hàng mới.
+     */
+    private String pendingCheckoutPhone = null;
 
     /**
      * Khởi tạo giao diện MainFrame.
@@ -95,7 +130,7 @@ public class MainFrame extends JFrame {
         setLayout(new BorderLayout());
 
         // Sử dụng SplitPane để phân tách khu vực chức năng và khu vực Bill
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         splitPane.setDividerLocation(850);
         splitPane.setDividerSize(3); // Thu nhỏ vách ngăn cho tinh tế
         splitPane.setBorder(null); // Bỏ viền mặc định của SplitPane
@@ -104,11 +139,20 @@ public class MainFrame extends JFrame {
         soDoBanPanel = new SoDoBanPanel();
         thucDonPanel = new ThucDonPanel();
         datBanPanel = new DatBanPanel();
+        khachHangPanel = new KhachHangPanel();
+        quanLyBanPanel = new QuanLyBanPanel();
+        thongKePanel = new ThongKePanel();
+        caiDatPanel = createCaiDatPanel();
+        khachHangPanel.setMainFrame(this);
 
         splitPane.setLeftComponent(createLeftContentPanel());
-        splitPane.setRightComponent(createRightBillPanel());
+        rightBillPanel = createRightBillPanel();
+        splitPane.setRightComponent(rightBillPanel);
 
         add(splitPane, BorderLayout.CENTER);
+
+        // Mặc định ẩn bill, chỉ hiện khi đã vào luồng order của một bàn có hóa đơn.
+        capNhatHienThiBill(false);
     }
 
     // =========================================
@@ -154,13 +198,19 @@ public class MainFrame extends JFrame {
         // --- Nút điều hướng ---
         JButton btnPhongBan = createSidebarButton("Sơ đồ bàn");
         JButton btnDatBan = createSidebarButton("Đặt bàn");
-        JButton btnThucDon = createSidebarButton("Thực đơn");
+        JButton btnThucDon = createSidebarButton("Gọi món");
+        JButton btnThongKe = createSidebarButton("Thống kê");
+        JButton btnCaiDat = createSidebarButton("Cài đặt");
 
         sidebar.add(btnPhongBan);
         sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
         sidebar.add(btnDatBan);
         sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
         sidebar.add(btnThucDon);
+        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
+        sidebar.add(btnThongKe);
+        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
+        sidebar.add(btnCaiDat);
         sidebar.add(Box.createVerticalGlue()); // Đẩy tất cả lên trên
 
         panel.add(sidebar, BorderLayout.WEST);
@@ -174,15 +224,82 @@ public class MainFrame extends JFrame {
         leftCardPanel.add(soDoBanPanel, "Phòng bàn");
         leftCardPanel.add(datBanPanel, "Đặt bàn");
         leftCardPanel.add(thucDonPanel, "Thực đơn");
+        leftCardPanel.add(thongKePanel, "Thống kê");
+        leftCardPanel.add(caiDatPanel, "Cài đặt");
+        leftCardPanel.add(quanLyBanPanel, "Quản lý bàn");
+        leftCardPanel.add(khachHangPanel, "Khách hàng");
 
         panel.add(leftCardPanel, BorderLayout.CENTER);
 
         // Đăng ký sự kiện chuyển card cho các nút Sidebar
-        btnPhongBan.addActionListener(e -> leftCardLayout.show(leftCardPanel, "Phòng bàn"));
-        btnDatBan.addActionListener(e -> leftCardLayout.show(leftCardPanel, "Đặt bàn"));
-        btnThucDon.addActionListener(e -> leftCardLayout.show(leftCardPanel, "Thực đơn"));
+        btnPhongBan.addActionListener(e -> chuyenTrang("Phòng bàn"));
+        btnDatBan.addActionListener(e -> chuyenTrang("Đặt bàn"));
+        btnThucDon.addActionListener(e -> {
+            thucDonPanel.setQuanLyMenuMode(false);
+            chuyenTrang("Thực đơn");
+        });
+        btnThongKe.addActionListener(e -> {
+            thongKePanel.loadData();
+            chuyenTrang("Thống kê");
+        });
+        btnCaiDat.addActionListener(e -> chuyenTrang("Cài đặt"));
 
         return panel;
+    }
+
+    /**
+     * Tạo màn Cài đặt để gom các chức năng quản trị hệ thống.
+     * Bao gồm lối vào Quản lý khách hàng và Quản lý menu.
+     */
+    private JPanel createCaiDatPanel() {
+        JPanel panel = new JPanel(new BorderLayout(12, 12));
+        panel.setBackground(new Color(241, 245, 249));
+        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        JLabel lblTitle = new JLabel("CÀI ĐẶT HỆ THỐNG");
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        lblTitle.setForeground(new Color(30, 64, 175));
+        panel.add(lblTitle, BorderLayout.NORTH);
+
+        JPanel content = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        content.setOpaque(false);
+
+        JButton btnKhachHang = createSettingActionButton("QL khách hàng");
+        btnKhachHang.addActionListener(e -> {
+            khachHangPanel.batCheDoQuanLy();
+            chuyenTrang("Khách hàng");
+        });
+
+        JButton btnMenu = createSettingActionButton("QL menu");
+        btnMenu.addActionListener(e -> {
+            thucDonPanel.setQuanLyMenuMode(true);
+            chuyenTrang("Thực đơn");
+        });
+
+        JButton btnQuanLyBan = createSettingActionButton("QL bàn");
+        btnQuanLyBan.addActionListener(e -> {
+            quanLyBanPanel.loadData();
+            chuyenTrang("Quản lý bàn");
+        });
+
+        content.add(btnKhachHang);
+        content.add(btnMenu);
+        content.add(btnQuanLyBan);
+        panel.add(content, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private JButton createSettingActionButton(String text) {
+        JButton btn = new JButton(text);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btn.setPreferredSize(new Dimension(130, 36));
+        btn.setBackground(Color.WHITE);
+        btn.setForeground(new Color(51, 65, 85));
+        btn.putClientProperty("JButton.buttonType", "square");
+        btn.setFocusPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return btn;
     }
 
     /**
@@ -280,8 +397,15 @@ public class MainFrame extends JFrame {
         lblTotal.setForeground(new Color(220, 38, 38)); // Đỏ nổi bật
         footerPanel.add(lblTotal, BorderLayout.NORTH);
 
-        JPanel btnGroup = new JPanel(new GridLayout(1, 2, 15, 0));
+        JPanel btnGroup = new JPanel(new GridLayout(1, 3, 15, 0));
         btnGroup.setOpaque(false);
+
+        JButton btnGiamMon = new JButton("XÓA 1 PHẦN");
+        btnGiamMon.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        btnGiamMon.setBackground(new Color(251, 146, 60));
+        btnGiamMon.setForeground(Color.WHITE);
+        btnGiamMon.putClientProperty("JButton.buttonType", "roundRect");
+        btnGiamMon.addActionListener(e -> xuLyGiamMonTrongBill());
 
         JButton btnReload = new JButton("LÀM MỚI BILL");
         btnReload.setFont(new Font("Segoe UI", Font.BOLD, 15));
@@ -297,6 +421,7 @@ public class MainFrame extends JFrame {
         btnThanhToan.putClientProperty("JButton.buttonType", "roundRect");
         btnThanhToan.addActionListener(e -> xuLyThanhToan());
 
+        btnGroup.add(btnGiamMon);
         btnGroup.add(btnReload);
         btnGroup.add(btnThanhToan);
         btnGroup.setPreferredSize(new Dimension(0, 55)); // Nút to bấm cho dễ
@@ -325,19 +450,18 @@ public class MainFrame extends JFrame {
         if (ban != null) {
             lblTenBanDangChon.setText("BÀN ĐANG CHỌN: " + ban.getTenBan());
         }
-
         billTableModel.setRowCount(0);
+        currentBillItems = new ArrayList<>();
         lblTotal.setText("Tổng cộng: 0 VNĐ");
 
         ThongKeDAO tkDAO = new ThongKeDAO();
         ChiTietBanDangDungDTO dangAn = tkDAO.getChiTietBanDangAn(maBan);
-
         if (dangAn != null) {
             currentMaHoaDon = dangAn.getMaHoaDon();
             lblTotal.setText(String.format("Tổng cộng: %,.3f VNĐ", dangAn.getThanhTienTamTinh()));
 
-            ArrayList<ChiTietHoaDonDTO> listMon = new ChiTietHoaDonDAO().getByHoaDonId(currentMaHoaDon);
-            for (ChiTietHoaDonDTO ct : listMon) {
+            currentBillItems = new ChiTietHoaDonDAO().getByHoaDonId(currentMaHoaDon);
+            for (ChiTietHoaDonDTO ct : currentBillItems) {
                 MonAnDTO mon = new MonAnDAO().getById(ct.getMaMon());
                 String tenMon = (mon != null) ? mon.getTenMon() : ct.getMaMon();
                 double thanhTien = ct.getSoLuong() * ct.getGiaBan();
@@ -349,6 +473,43 @@ public class MainFrame extends JFrame {
                         String.format("%,.3f", thanhTien)
                 });
             }
+        }
+
+        capNhatHienThiBill(currentMaHoaDon != null && "Thực đơn".equals(getCardDangHienThi()));
+    }
+
+    /**
+     * Giảm số lượng của món đang được chọn trong bill đi 1 phần.
+     * Nếu món chỉ còn 1 phần thì dòng đó sẽ bị xóa khỏi hóa đơn.
+     */
+    private void xuLyGiamMonTrongBill() {
+        if (currentMaHoaDon == null) {
+            JOptionPane.showMessageDialog(this, "Vui lòng mở bàn trước khi xóa món!", "Thông báo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int row = billTable.getSelectedRow();
+        if (row < 0 || row >= currentBillItems.size()) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn món cần xóa bớt trong bill!", "Thông báo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        ChiTietHoaDonDTO ct = currentBillItems.get(row);
+        int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "Xóa bớt 1 phần món '" + ct.getMaMon() + "' khỏi hóa đơn?",
+                "Xác nhận",
+                JOptionPane.YES_NO_OPTION
+        );
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        if (new ChiTietHoaDonDAO().giamSoLuongMonTrongHoaDon(currentMaHoaDon, ct.getMaMon(), 1)) {
+            openTable(currentMaBan);
+            Toast.success(this, "Đã giảm 1 phần món khỏi hóa đơn");
+        } else {
+            JOptionPane.showMessageDialog(this, "Không thể xóa món khỏi hóa đơn!", "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -386,10 +547,81 @@ public class MainFrame extends JFrame {
             return;
         }
 
-        int confirm = JOptionPane.showConfirmDialog(this, "Xác nhận thanh toán cho " + currentMaBan + "?", "Thanh toán", JOptionPane.YES_NO_OPTION);
+        JTextField txtSoDienThoai = new JTextField();
+        String soDienThoaiMacDinh = laySoDienThoaiKhachTrongHoaDonHienTai();
+        if (soDienThoaiMacDinh != null && !soDienThoaiMacDinh.isEmpty()) {
+            txtSoDienThoai.setText(soDienThoaiMacDinh);
+        }
+        JLabel lblHuongDan = new JLabel("Tự điền SĐT nếu bàn đã gắn khách. Để trống nếu khách vãng lai.");
+
+        JPanel pnlNhap = new JPanel(new BorderLayout(0, 8));
+        JPanel pnlForm = new JPanel(new GridLayout(2, 1, 0, 6));
+        pnlForm.add(new JLabel("Số điện thoại khách hàng:"));
+        pnlForm.add(txtSoDienThoai);
+        pnlNhap.add(lblHuongDan, BorderLayout.NORTH);
+        pnlNhap.add(pnlForm, BorderLayout.CENTER);
+
+        int nhapKetQua = JOptionPane.showConfirmDialog(
+                this,
+                pnlNhap,
+                "Thanh toán - Thông tin khách hàng",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (nhapKetQua != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        String soDienThoai = txtSoDienThoai.getText().trim();
+
+        if (!soDienThoai.isEmpty() && !new quanlynhahang.bus.KhachHangBUS().validatePhone(soDienThoai)) {
+            JOptionPane.showMessageDialog(this, "Số điện thoại không hợp lệ (cần đúng 10 chữ số)!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (!soDienThoai.isEmpty()) {
+            KhachHangDAO khDAO = new KhachHangDAO();
+            if (khDAO.getById(soDienThoai) == null) {
+                pendingCheckoutPhone = soDienThoai;
+                moManKhachHangTuSDTChoThanhToan(soDienThoai);
+                return;
+            }
+        }
+
+        thucHienThanhToanVoiSoDienThoai(soDienThoai);
+    }
+
+    /**
+     * Thực hiện phần thanh toán còn lại sau khi đã có SĐT khách hàng.
+     * @param soDienThoai số điện thoại khách hàng, có thể rỗng
+     */
+    private void thucHienThanhToanVoiSoDienThoai(String soDienThoai) {
+        if (soDienThoai == null || soDienThoai.trim().isEmpty()) {
+            soDienThoai = laySoDienThoaiKhachTrongHoaDonHienTai();
+        }
+
+        quanlynhahang.bus.HoaDonBUS hdBUS = new quanlynhahang.bus.HoaDonBUS();
+        if (!hdBUS.capNhatGiamGiaTheoSoDienThoai(currentMaHoaDon, soDienThoai)) {
+            JOptionPane.showMessageDialog(this, "Không tìm thấy khách hàng theo số điện thoại hoặc không thể áp dụng giảm giá!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        HoaDonDTO hd = new HoaDonDAO().getById(currentMaHoaDon);
+        String noiDungXacNhan = "Xác nhận thanh toán cho " + currentMaBan + "?";
+        if (hd != null) {
+            noiDungXacNhan = String.format(
+                    "Xác nhận thanh toán cho %s?\n\nTổng tiền: %,.0f VNĐ\nGiảm giá: %,.0f VNĐ\nThành tiền: %,.0f VNĐ",
+                    currentMaBan,
+                    hd.getTongTien(),
+                    hd.getTienGiamGia(),
+                    hd.getThanhTien()
+            );
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this, noiDungXacNhan, "Thanh toán", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
-            if (new quanlynhahang.bus.HoaDonBUS().thanhToanHoaDon(currentMaHoaDon)) {
-                // Sử dụng Toast để thông báo mượt mà
+            if (hdBUS.thanhToanHoaDon(currentMaHoaDon)) {
                 Toast.success(this, "Thanh toán thành công! Bàn đã được dọn.");
                 soDoBanPanel.loadSoDoBan();
                 openTable(currentMaBan);
@@ -400,12 +632,135 @@ public class MainFrame extends JFrame {
     }
 
     /**
+     * Lấy số điện thoại khách hàng đang gắn với hóa đơn hiện tại (nếu có).
+     * @return số điện thoại khách hàng hoặc chuỗi rỗng khi không có
+     */
+    private String laySoDienThoaiKhachTrongHoaDonHienTai() {
+        if (currentMaHoaDon == null) {
+            return "";
+        }
+
+        HoaDonDTO hd = new HoaDonDAO().getById(currentMaHoaDon);
+        if (hd == null || hd.getMaKhachHang() == null || hd.getMaKhachHang().trim().isEmpty()) {
+            return "";
+        }
+
+        KhachHangDTO kh = new KhachHangDAO().getById(hd.getMaKhachHang());
+        if (kh == null || kh.getSoDienThoai() == null) {
+            return "";
+        }
+
+        return kh.getSoDienThoai().trim();
+    }
+
+    /**
      * Tiện ích giúp chuyển đổi giữa các màn hình bên trái từ các component con (như ThucDonPanel).
      *
      * @param name Mã String của panel cần hiển thị (vd: "Phòng bàn", "Thực đơn").
      */
     public void chuyenTrang(String name) {
+        if (!"Thực đơn".equals(name)) {
+            capNhatHienThiBill(false);
+        } else {
+            capNhatHienThiBill(currentMaHoaDon != null);
+        }
         leftCardLayout.show(leftCardPanel, name);
+    }
+
+    private String getCardDangHienThi() {
+        for (Component component : leftCardPanel.getComponents()) {
+            if (component.isVisible()) {
+                if (component == thucDonPanel) return "Thực đơn";
+                if (component == soDoBanPanel) return "Phòng bàn";
+                if (component == datBanPanel) return "Đặt bàn";
+                if (component == caiDatPanel) return "Cài đặt";
+                if (component == quanLyBanPanel) return "Quản lý bàn";
+                if (component == khachHangPanel) return "Khách hàng";
+                if (component == thongKePanel) return "Thống kê";
+            }
+        }
+        return "";
+    }
+
+    private void capNhatHienThiBill(boolean hienThi) {
+        if (splitPane == null || rightBillPanel == null) {
+            return;
+        }
+
+        rightBillPanel.setVisible(hienThi);
+        splitPane.setDividerSize(hienThi ? 3 : 0);
+
+        if (hienThi) {
+            splitPane.setDividerLocation(DEFAULT_DIVIDER_LOCATION);
+        } else {
+            splitPane.setDividerLocation(1.0);
+        }
+
+        splitPane.revalidate();
+        splitPane.repaint();
+    }
+
+    /**
+     * Làm mới sơ đồ bàn để cập nhật màu và trạng thái mới nhất.
+     */
+    public void refreshSoDoBan() {
+        soDoBanPanel.loadSoDoBan();
+    }
+
+    /**
+     * Mở màn hình đặt bàn và chọn sẵn bàn cần đặt.
+     * @param maBan mã bàn muốn đặt trước
+     */
+    public void moManDatBanChoBan(String maBan) {
+        datBanPanel.chuanBiDatBanChoBan(maBan);
+        chuyenTrang("Đặt bàn");
+    }
+
+    /**
+     * Mở trang tạo khách hàng và điền trước số điện thoại.
+     * @param soDienThoai số điện thoại khách cần tạo
+     */
+    public void moManKhachHangTuSDT(String soDienThoai) {
+        pendingCheckoutPhone = null;
+        khachHangPanel.chuanBiThemKhachMoi(soDienThoai);
+        khachHangPanel.setChuyenVeThanhToan(false);
+        chuyenTrang("Khách hàng");
+    }
+
+    /**
+     * Mở trang tạo khách hàng từ luồng thanh toán và ghi nhớ SĐT đang chờ.
+     * @param soDienThoai số điện thoại cần tạo
+     */
+    public void moManKhachHangTuSDTChoThanhToan(String soDienThoai) {
+        pendingCheckoutPhone = soDienThoai != null ? soDienThoai.trim() : null;
+        khachHangPanel.chuanBiThemKhachMoi(soDienThoai);
+        khachHangPanel.setChuyenVeThanhToan(true);
+        chuyenTrang("Khách hàng");
+    }
+
+    /**
+     * Tiếp tục thanh toán sau khi vừa tạo xong khách hàng mới.
+     * @param soDienThoai số điện thoại khách vừa tạo
+     */
+    public void tiepTucThanhToanSauKhiTaoKhach(String soDienThoai) {
+        String phone = soDienThoai != null ? soDienThoai.trim() : "";
+        if (phone.isEmpty() && pendingCheckoutPhone != null) {
+            phone = pendingCheckoutPhone;
+        }
+        pendingCheckoutPhone = null;
+        if (phone.isEmpty() || !new quanlynhahang.bus.KhachHangBUS().validatePhone(phone)) {
+            return;
+        }
+        thucHienThanhToanVoiSoDienThoai(phone);
+    }
+
+    /**
+     * Quay lại màn đặt bàn và điền lại số điện thoại khách.
+     * @param soDienThoai số điện thoại khách
+     */
+    public void quayLaiDatBanVoiSoDienThoai(String soDienThoai) {
+        datBanPanel.datSoDienThoaiKhach(soDienThoai);
+        chuyenTrang("Đặt bàn");
     }
 
     /**

@@ -3,6 +3,7 @@ package quanlynhahang.dao;
 import quanlynhahang.dto.KhachHangDTO;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Date;
 
 /**
  * DAO thực hiện truy vấn cho bảng KhachHang.
@@ -140,5 +141,48 @@ public class KhachHangDAO implements IDAO<KhachHangDTO, String> {
             e.printStackTrace();
         }
         return null;
+    }
+
+    /**
+     * Tạo mã khách hàng mới theo dạng KH000001.
+     * @return mã khách hàng chưa tồn tại
+     */
+    public String taoMaKhachHangMoi() {
+        for (int i = 1; i <= 999999; i++) {
+            String ma = String.format("KH%06d", i);
+            if (getById(ma) == null) {
+                return ma;
+            }
+        }
+        return "KH" + (System.currentTimeMillis() % 100000000);
+    }
+
+    /**
+     * Tạo nhanh khách hàng mới từ tên và số điện thoại.
+     * @param tenKhach tên khách hàng
+     * @param soDienThoai số điện thoại khách hàng
+     * @return KhachHangDTO vừa tạo nếu thành công, null nếu thất bại
+     */
+    public KhachHangDTO taoNhanhKhachMoi(String tenKhach, String soDienThoai) {
+        if (soDienThoai == null || soDienThoai.trim().isEmpty()) {
+            return null;
+        }
+
+        KhachHangDTO daTonTai = getById(soDienThoai.trim());
+        if (daTonTai != null) {
+            return daTonTai;
+        }
+
+        KhachHangDTO khachMoi = new KhachHangDTO(
+                taoMaKhachHangMoi(),
+                "H01",
+                tenKhach,
+                soDienThoai.trim(),
+                0,
+                new Date(),
+                true
+        );
+
+        return insert(khachMoi) ? khachMoi : null;
     }
 }

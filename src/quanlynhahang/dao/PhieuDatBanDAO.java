@@ -115,6 +115,38 @@ public class PhieuDatBanDAO implements IDAO<PhieuDatBanDTO, String> {
     }
 
     /**
+     * Lấy danh sách phiếu đặt bàn hôm nay từ view v_PhieuDatBanHomNay.
+     * @return danh sách PhieuDatBanDTO của ngày hiện tại
+     */
+    public ArrayList<PhieuDatBanDTO> getPhieuDatBanHomNay() {
+        ArrayList<PhieuDatBanDTO> list = new ArrayList<>();
+        String sql = "SELECT MaDatBan, MaKhachHang, MaBan, GioKhachHen AS ThoiGianNhanBan, SoLuongKhach, TrangThai, GhiChu FROM v_PhieuDatBanHomNay ORDER BY GioKhachHen ASC";
+
+        try (Connection conn = DBConnection.getConnection();
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+
+            while (rs.next()) {
+                Timestamp gioHen = rs.getTimestamp("ThoiGianNhanBan");
+                list.add(new PhieuDatBanDTO(
+                        rs.getString("MaDatBan"),
+                        rs.getString("MaKhachHang"),
+                        rs.getString("MaBan"),
+                        gioHen,
+                        gioHen,
+                        rs.getInt("SoLuongKhach"),
+                        rs.getString("TrangThai"),
+                        rs.getString("GhiChu")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+    /**
      * Lấy phiếu đặt bàn theo mã.
      * @param key mã phiếu đặt bàn
      * @return PhieuDatBanDTO nếu tồn tại, null nếu không

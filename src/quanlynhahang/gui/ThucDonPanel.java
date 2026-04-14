@@ -17,6 +17,8 @@ public class ThucDonPanel extends JPanel {
 
     private DefaultTableModel tableModel;
     private JTable table;
+    private JComboBox<String> cbxBoLoc;
+    private JLabel lblTitle;
 
     // --- COMPONENTS NHẬP LIỆU ---
     private JTextField txtMaMon;
@@ -24,7 +26,14 @@ public class ThucDonPanel extends JPanel {
     private JTextField txtGiaBan;
     private JComboBox<String> cbxPhanLoai;
     private JComboBox<String> cbxTrangThai;
-
+    private JPanel pnlRight;
+    private JPanel pnlActions;
+    private JPanel pnlForm;
+    private JButton btnThem;
+    private JButton btnSua;
+    private JButton btnXoa;
+    private JButton btnLamMoi;
+    private JButton btnOrder;
     /**
      * Khởi tạo giao diện ThucDonPanel với đầy đủ tính năng.
      */
@@ -34,7 +43,7 @@ public class ThucDonPanel extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         // 1. Header: Tiêu đề trang
-        JLabel lblTitle = new JLabel("QUẢN LÝ THỰC ĐƠN & GỌI MÓN");
+        lblTitle = new JLabel("GỌI MÓN");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
         lblTitle.setForeground(new Color(30, 64, 175));
         add(lblTitle, BorderLayout.NORTH);
@@ -47,12 +56,24 @@ public class ThucDonPanel extends JPanel {
 
         // Tải dữ liệu từ DB lên bảng
         loadData();
+        setQuanLyMenuMode(false);
     }
 
     /**
      * Tạo khu vực bảng hiển thị danh sách món ăn.
      */
     private void createTableArea() {
+        JPanel pnlTableArea = new JPanel(new BorderLayout(8, 8));
+        pnlTableArea.setBackground(getBackground());
+
+        JPanel pnlFilter = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        pnlFilter.setBackground(getBackground());
+        pnlFilter.add(new JLabel("Hiển thị: "));
+
+        cbxBoLoc = new JComboBox<>(new String[]{"Tất cả món", "Đang phục vụ"});
+        cbxBoLoc.addActionListener(e -> loadData(cbxBoLoc.getSelectedIndex() == 1));
+        pnlFilter.add(cbxBoLoc);
+
         String[] columns = {"Mã Món", "Tên Món", "Phân Loại", "Giá Bán (VNĐ)", "Trạng Thái"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
@@ -82,14 +103,16 @@ public class ThucDonPanel extends JPanel {
             }
         });
 
-        add(new JScrollPane(table), BorderLayout.CENTER);
+        pnlTableArea.add(pnlFilter, BorderLayout.NORTH);
+        pnlTableArea.add(new JScrollPane(table), BorderLayout.CENTER);
+        add(pnlTableArea, BorderLayout.CENTER);
     }
 
     /**
      * Tạo khu vực quản lý thông tin món ăn (Form & Buttons).
      */
     private void createManagementArea() {
-        JPanel pnlRight = new JPanel(new BorderLayout(10, 10));
+        pnlRight = new JPanel(new BorderLayout(10, 10));
         pnlRight.setPreferredSize(new Dimension(350, 0));
         pnlRight.setBackground(Color.WHITE);
         pnlRight.setBorder(BorderFactory.createCompoundBorder(
@@ -98,7 +121,7 @@ public class ThucDonPanel extends JPanel {
         ));
 
         // --- FORM NHẬP LIỆU ---
-        JPanel pnlForm = new JPanel(new GridLayout(10, 1, 5, 5));
+        pnlForm = new JPanel(new GridLayout(10, 1, 5, 5));
         pnlForm.setBackground(Color.WHITE);
 
         txtMaMon = new JTextField();
@@ -116,16 +139,16 @@ public class ThucDonPanel extends JPanel {
         pnlRight.add(pnlForm, BorderLayout.NORTH);
 
         // --- HÀNH ĐỘNG (BUTTONS) ---
-        JPanel pnlActions = new JPanel(new GridLayout(3, 2, 8, 8));
+        pnlActions = new JPanel(new GridLayout(3, 2, 8, 8));
         pnlActions.setBackground(Color.WHITE);
 
-        JButton btnThem = new JButton("Thêm món");
-        JButton btnSua = new JButton("Cập nhật");
-        JButton btnXoa = new JButton("Ngừng bán");
-        JButton btnLamMoi = new JButton("Làm mới Form");
+        btnThem = new JButton("Thêm món");
+        btnSua = new JButton("Cập nhật");
+        btnXoa = new JButton("Ngừng bán");
+        btnLamMoi = new JButton("Làm mới Form");
 
         // NÚT MỐI NỐI: Đẩy món sang hóa đơn
-        JButton btnOrder = new JButton("CHO VÀO BILL");
+        btnOrder = new JButton("CHO VÀO BILL");
         btnOrder.setBackground(new Color(255, 153, 0));
         btnOrder.setForeground(Color.WHITE);
         btnOrder.setFont(new Font("Segoe UI", Font.BOLD, 15));
@@ -224,6 +247,12 @@ public class ThucDonPanel extends JPanel {
                 return;
             }
 
+            String trangThai = tableModel.getValueAt(row, 4).toString();
+            if (!"Còn phục vụ".equals(trangThai)) {
+                JOptionPane.showMessageDialog(this, "Món này đang hết hàng, không thể thêm vào bill!", "Thông báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
             String maMon = tableModel.getValueAt(row, 0).toString();
             String tenMon = tableModel.getValueAt(row, 1).toString();
             double gia = Double.parseDouble(tableModel.getValueAt(row, 3).toString().replace(",", ""));
@@ -239,8 +268,18 @@ public class ThucDonPanel extends JPanel {
      * Tải danh sách món ăn từ Database lên JTable.
      */
     public void loadData() {
+        loadData(false);
+    }
+
+    /**
+     * Tải danh sách món ăn theo bộ lọc trạng thái.
+     * @param onlyServing true nếu chỉ lấy món đang phục vụ, false nếu lấy tất cả.
+     */
+    public void loadData(boolean onlyServing) {
         tableModel.setRowCount(0);
-        ArrayList<MonAnDTO> list = new MonAnDAO().getAll();
+        ArrayList<MonAnDTO> list = onlyServing
+                ? new MonAnDAO().getThucDonDangPhucVu()
+                : new MonAnDAO().getAll();
         for (MonAnDTO m : list) {
             tableModel.addRow(new Object[]{
                     m.getMaMon(),
@@ -250,5 +289,64 @@ public class ThucDonPanel extends JPanel {
                     m.isTrangThaiPhucVu() ? "Còn phục vụ" : "Hết hàng"
             });
         }
+    }
+
+    /**
+     * Bật/tắt chế độ quản lý menu.
+     * false: chỉ gọi món, ẩn chức năng thêm/sửa/xóa.
+     * true: hiển thị đầy đủ chức năng quản lý menu.
+     */
+    public void setQuanLyMenuMode(boolean enable) {
+        lblTitle.setText(enable ? "QUẢN LÝ THỰC ĐƠN" : "GỌI MÓN");
+
+        capNhatGiaoDienTheoMode(enable);
+
+        if (!enable) {
+            txtMaMon.setEditable(true);
+            txtMaMon.setText("");
+            txtTenMon.setText("");
+            txtGiaBan.setText("");
+            cbxPhanLoai.setSelectedIndex(0);
+            cbxTrangThai.setSelectedIndex(0);
+            table.clearSelection();
+            cbxBoLoc.setSelectedIndex(1);
+            loadData(true);
+        } else {
+            cbxBoLoc.setSelectedIndex(0);
+            loadData(false);
+        }
+
+        revalidate();
+        repaint();
+    }
+
+    private void capNhatGiaoDienTheoMode(boolean quanLyMode) {
+        if (pnlRight == null || pnlActions == null || pnlForm == null) {
+            return;
+        }
+
+        pnlActions.removeAll();
+
+        if (quanLyMode) {
+            pnlRight.setPreferredSize(new Dimension(350, 0));
+            pnlForm.setVisible(true);
+            pnlActions.setLayout(new GridLayout(2, 2, 8, 8));
+            pnlActions.add(btnThem);
+            pnlActions.add(btnSua);
+            pnlActions.add(btnXoa);
+            pnlActions.add(btnLamMoi);
+            btnOrder.setVisible(false);
+        } else {
+            pnlRight.setPreferredSize(new Dimension(220, 0));
+            pnlForm.setVisible(false);
+            pnlActions.setLayout(new GridLayout(1, 1, 0, 0));
+            btnOrder.setVisible(true);
+            pnlActions.add(btnOrder);
+        }
+
+        pnlActions.revalidate();
+        pnlActions.repaint();
+        pnlRight.revalidate();
+        pnlRight.repaint();
     }
 }
