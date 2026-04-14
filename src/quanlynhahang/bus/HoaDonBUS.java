@@ -72,4 +72,14 @@ public class HoaDonBUS {
     public boolean thanhToanHoaDon(String maHoaDon) {
         return hoaDonDAO.thanhToanHoaDon(maHoaDon);
     }
+
+    /**
+     * Áp dụng thông tin khách hàng theo số điện thoại và tính tiền giảm giá cho hóa đơn.
+     * @param maHoaDon mã hóa đơn cần cập nhật
+     * @param soDienThoai số điện thoại khách hàng (để trống nếu khách vãng lai)
+     * @return true nếu cập nhật thành công, false nếu thất bại
+     */
+    public boolean capNhatGiamGiaTheoSoDienThoai(String maHoaDon, String soDienThoai) {
+        return hoaDonDAO.capNhatGiamGiaTheoSoDienThoai(maHoaDon, soDienThoai);
+    }
 }

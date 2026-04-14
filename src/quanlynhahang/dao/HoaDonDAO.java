@@ -35,7 +35,8 @@ public class HoaDonDAO implements IDAO<HoaDonDTO, String> {
             cs.setString(1, maBan);
             cs.setString(2, maKhachHang); // Có thể để null nếu khách vãng lai
 
-            return cs.executeUpdate() > 0;
+            cs.execute();
+            return true;
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -50,11 +51,137 @@ public class HoaDonDAO implements IDAO<HoaDonDTO, String> {
      */
     public boolean thanhToanHoaDon(String maHoaDon) {
         String sql = "{CALL sp_ThanhToanVaTichDiem(?)}";
-        try (Connection conn = DBConnection.getConnection();
-             CallableStatement cs = conn.prepareCall(sql)) {
+        String thongTinTruocSql = "SELECT h.maKhachHang, h.maBan, h.thanhTien, kh.tongChiTieu FROM HoaDon h LEFT JOIN KhachHang kh ON h.maKhachHang = kh.maKhachHang WHERE h.maHoaDon = ?";
+        String tongChiTieuSauSql = "SELECT tongChiTieu FROM KhachHang WHERE maKhachHang = ?";
+        String capNhatTongChiTieuSql = "UPDATE KhachHang SET tongChiTieu = tongChiTieu + ? WHERE maKhachHang = ? AND trangThai = 1";
+        String capNhatTrangThaiBanSauThanhToanSql = "UPDATE BanAn SET trangThai = CASE WHEN EXISTS (SELECT 1 FROM PhieuDatBan WHERE maBan = ? AND trangThai = N'Chờ nhận') THEN N'Đã đặt' ELSE N'Trống' END WHERE maBan = ?";
+
+        String maKhachHang = null;
+        String maBan = null;
+        double thanhTienHoaDon = 0.0;
+        Double tongChiTieuTruoc = null;
+
+           try (Connection conn = DBConnection.getConnection();
+               CallableStatement cs = conn.prepareCall(sql)) {
+
+            // Đọc trạng thái trước khi thanh toán để đối chiếu với dữ liệu sau SP.
+            try (PreparedStatement ps = conn.prepareStatement(thongTinTruocSql)) {
+                ps.setString(1, maHoaDon);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        maKhachHang = rs.getString("maKhachHang");
+                        maBan = rs.getString("maBan");
+                        thanhTienHoaDon = rs.getDouble("thanhTien");
+                        double tongTemp = rs.getDouble("tongChiTieu");
+                        if (!rs.wasNull()) {
+                            tongChiTieuTruoc = tongTemp;
+                        }
+                    }
+                }
+            }
 
             cs.setString(1, maHoaDon);
-            return cs.executeUpdate() > 0;
+            cs.execute();
+
+            // Nếu bàn còn phiếu đặt chờ nhận thì giữ trạng thái "Đã đặt" thay vì "Trống".
+            if (maBan != null && !maBan.trim().isEmpty()) {
+                try {
+                    try (PreparedStatement ps = conn.prepareStatement(capNhatTrangThaiBanSauThanhToanSql)) {
+                        ps.setString(1, maBan);
+                        ps.setString(2, maBan);
+                        ps.executeUpdate();
+                    }
+                } catch (SQLException capNhatBanEx) {
+                    capNhatBanEx.printStackTrace();
+                }
+            }
+
+            // Fallback cộng bù chỉ chạy khi cần và không được làm ảnh hưởng kết quả thanh toán.
+            if (maKhachHang != null && tongChiTieuTruoc != null && thanhTienHoaDon > 0) {
+                try {
+                    Double tongChiTieuSau = null;
+                    try (PreparedStatement ps = conn.prepareStatement(tongChiTieuSauSql)) {
+                        ps.setString(1, maKhachHang);
+                        try (ResultSet rs = ps.executeQuery()) {
+                            if (rs.next()) {
+                                double tongTemp = rs.getDouble("tongChiTieu");
+                                if (!rs.wasNull()) {
+                                    tongChiTieuSau = tongTemp;
+                                }
+                            }
+                        }
+                    }
+
+                    if (tongChiTieuSau != null) {
+                        double daTang = tongChiTieuSau - tongChiTieuTruoc;
+                        double canTangThem = thanhTienHoaDon - daTang;
+
+                        if (canTangThem > 0.5) {
+                            try (PreparedStatement ps = conn.prepareStatement(capNhatTongChiTieuSql)) {
+                                ps.setDouble(1, canTangThem);
+                                ps.setString(2, maKhachHang);
+                                ps.executeUpdate();
+                            }
+                        }
+                    }
+                } catch (SQLException fallbackEx) {
+                    fallbackEx.printStackTrace();
+                }
+            }
+
+            // Nếu stored procedure đã chạy xong, xem như thanh toán thành công.
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    /**
+     * Cập nhật khách hàng theo số điện thoại và tự động tính lại tiền giảm giá cho hóa đơn.
+     * Nếu số điện thoại rỗng thì xem như khách vãng lai (không giảm giá).
+     *
+     * @param maHoaDon mã hóa đơn cần áp dụng ưu đãi
+     * @param soDienThoai số điện thoại khách hàng
+     * @return true nếu cập nhật thành công, false nếu lỗi hoặc không tìm thấy khách theo SĐT
+     */
+    public boolean capNhatGiamGiaTheoSoDienThoai(String maHoaDon, String soDienThoai) {
+        // Để trống SĐT sẽ giữ nguyên khách hàng hiện có trên hóa đơn (nếu có),
+        // từ đó trigger/thủ tục thanh toán vẫn cộng TổngChiTiêu đúng khách.
+        String updateKhachHienTaiSql = "UPDATE HoaDon SET tienGiamGia = CASE WHEN maKhachHang IS NULL THEN 0 ELSE tongTien * dbo.fn_LayGiamGiaKhachHang(maKhachHang) END, thanhTien = CASE WHEN tongTien - (CASE WHEN maKhachHang IS NULL THEN 0 ELSE tongTien * dbo.fn_LayGiamGiaKhachHang(maKhachHang) END) < 0 THEN 0 ELSE tongTien - (CASE WHEN maKhachHang IS NULL THEN 0 ELSE tongTien * dbo.fn_LayGiamGiaKhachHang(maKhachHang) END) END WHERE maHoaDon = ? AND trangThai = N'Chưa TT'";
+        String getMaKhachSql = "SELECT maKhachHang FROM KhachHang WHERE soDienThoai = ? AND trangThai = 1";
+        String updateMemberSql = "UPDATE HoaDon SET maKhachHang = ?, tienGiamGia = tongTien * dbo.fn_LayGiamGiaKhachHang(?), thanhTien = CASE WHEN tongTien - (tongTien * dbo.fn_LayGiamGiaKhachHang(?)) < 0 THEN 0 ELSE tongTien - (tongTien * dbo.fn_LayGiamGiaKhachHang(?)) END WHERE maHoaDon = ? AND trangThai = N'Chưa TT'";
+
+        try (Connection conn = DBConnection.getConnection()) {
+            if (soDienThoai == null || soDienThoai.trim().isEmpty()) {
+                try (PreparedStatement ps = conn.prepareStatement(updateKhachHienTaiSql)) {
+                    ps.setString(1, maHoaDon);
+                    return ps.executeUpdate() > 0;
+                }
+            }
+
+            String maKhachHang = null;
+            try (PreparedStatement ps = conn.prepareStatement(getMaKhachSql)) {
+                ps.setString(1, soDienThoai.trim());
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        maKhachHang = rs.getString("maKhachHang");
+                    }
+                }
+            }
+
+            if (maKhachHang == null) {
+                return false;
+            }
+
+            try (PreparedStatement ps = conn.prepareStatement(updateMemberSql)) {
+                ps.setString(1, maKhachHang);
+                ps.setString(2, maKhachHang);
+                ps.setString(3, maKhachHang);
+                ps.setString(4, maKhachHang);
+                ps.setString(5, maHoaDon);
+                return ps.executeUpdate() > 0;
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }

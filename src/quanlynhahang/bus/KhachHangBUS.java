@@ -1,15 +1,10 @@
 package quanlynhahang.bus;
 
-import quanlynhahang.dao.KhachHangDAO;
-import quanlynhahang.dto.KhachHangDTO;
-
 /**
  * Lớp xử lý nghiệp vụ khách hàng.
  * Cung cấp các hàm kiểm tra định dạng, tính điểm và xác định hạng khách.
  */
 public class KhachHangBUS {
-    private KhachHangDAO khDAO = new KhachHangDAO();
-
     /**
      * Xác thực số điện thoại khách hàng phải đúng 10 chữ số.
      * @param phone số điện thoại cần kiểm tra

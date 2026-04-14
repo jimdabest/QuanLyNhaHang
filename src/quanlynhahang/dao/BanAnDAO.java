@@ -59,6 +59,27 @@ public class BanAnDAO implements IDAO<BanAnDTO, String> {
     }
 
     /**
+     * Cập nhật riêng trạng thái của bàn ăn.
+     * @param maBan mã bàn cần đổi trạng thái
+     * @param trangThai trạng thái mới
+     * @return true nếu cập nhật thành công, false nếu thất bại
+     */
+    public boolean capNhatTrangThai(String maBan, String trangThai) {
+        String sql = "UPDATE BanAn SET trangThai = ? WHERE maBan = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, trangThai);
+            ps.setString(2, maBan);
+
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    /**
      * Xóa bàn ăn theo mã bàn.
      * Lưu ý DAO chỉ thực hiện xóa vật lý, BUS cần đảm bảo không xóa bàn đang có khách.
      * @param key mã bàn cần xóa

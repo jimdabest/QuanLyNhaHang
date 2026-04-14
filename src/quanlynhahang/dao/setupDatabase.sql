@@ -289,7 +289,25 @@ RETURN;
 END
 
 UPDATE HoaDon SET ThoiGianRa = GETDATE(), TrangThai = N'Đã TT' WHERE MaHoaDon = @MaHoaDon;
-UPDATE BanAn SET TrangThai = N'Trống' WHERE MaBan = @MaBan;
+UPDATE BanAn
+SET TrangThai = CASE
+                                        WHEN EXISTS (
+                                                SELECT 1
+                                                FROM PhieuDatBan p
+                                                WHERE p.MaBan = @MaBan
+                                                    AND p.TrangThai = N'Chờ nhận'
+                                        ) THEN N'Đã đặt'
+                                        ELSE N'Trống'
+                                END
+WHERE MaBan = @MaBan;
+
+-- Cộng tổng chi tiêu cho khách hàng dựa trên số tiền thực trả của bill
+IF @MaKhachHang IS NOT NULL
+BEGIN
+UPDATE KhachHang
+SET TongChiTieu = TongChiTieu + ISNULL(@ThanhTien, 0)
+WHERE MaKhachHang = @MaKhachHang AND TrangThai = 1;
+END
 
 -- (Có thể viết thêm logic cộng điểm vào bảng LichSuDiem ở đây)
 
@@ -363,7 +381,13 @@ BEGIN
 UPDATE b
 SET b.TrangThai = CASE
                       WHEN i.TrangThai = N'Chưa TT' THEN N'Đang ăn'
-                      WHEN i.TrangThai = N'Đã TT' THEN N'Trống'
+                                            WHEN i.TrangThai = N'Đã TT' AND EXISTS (
+                                                    SELECT 1
+                                                    FROM PhieuDatBan p
+                                                    WHERE p.MaBan = i.MaBan
+                                                        AND p.TrangThai = N'Chờ nhận'
+                                            ) THEN N'Đã đặt'
+                                            WHEN i.TrangThai = N'Đã TT' THEN N'Trống'
                       ELSE b.TrangThai
     END
     FROM BanAn b

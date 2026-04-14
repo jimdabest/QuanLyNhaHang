@@ -35,6 +35,9 @@ bin/
 # Build và IDE
 out/
 production/
+build/
+target/
+*.class
 repomix-output.xml
 QuanLyNhaHang.iml
 

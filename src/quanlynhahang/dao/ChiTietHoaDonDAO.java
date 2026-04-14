@@ -30,18 +30,38 @@ public class ChiTietHoaDonDAO implements IDAO<ChiTietHoaDonDTO, String> {
      * @return true nếu thực hiện thành công, false nếu lỗi
      */
     public boolean themMonVaoHoaDon(String maHoaDon, String maMon, int soLuong, double giaBan, String ghiChu) {
-        // Khi thêm món, Trigger SQL của bạn sẽ tự động gọi hàm fn_TongTienHoaDon để cập nhật bảng HoaDon
-        String sql = "INSERT INTO ChiTietHoaDon (maHoaDon, maMon, soLuong, giaBan, ghiChu) VALUES (?, ?, ?, ?, ?)";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        if (soLuong <= 0) {
+            return false;
+        }
 
-            ps.setString(1, maHoaDon);
-            ps.setString(2, maMon);
-            ps.setInt(3, soLuong);
-            ps.setDouble(4, giaBan);
-            ps.setString(5, ghiChu);
+        // Nếu món đã có trong hóa đơn thì cộng dồn số lượng, tránh lỗi khóa chính (maHoaDon, maMon).
+        String updateSql = "UPDATE ChiTietHoaDon SET soLuong = soLuong + ?, giaBan = ?, ghiChu = CASE WHEN ? IS NULL OR LTRIM(RTRIM(?)) = '' THEN ghiChu ELSE ? END WHERE maHoaDon = ? AND maMon = ?";
+        String insertSql = "INSERT INTO ChiTietHoaDon (maHoaDon, maMon, soLuong, giaBan, ghiChu) VALUES (?, ?, ?, ?, ?)";
 
-            return ps.executeUpdate() > 0;
+        try (Connection conn = DBConnection.getConnection()) {
+            try (PreparedStatement updatePs = conn.prepareStatement(updateSql)) {
+                updatePs.setInt(1, soLuong);
+                updatePs.setDouble(2, giaBan);
+                updatePs.setString(3, ghiChu);
+                updatePs.setString(4, ghiChu);
+                updatePs.setString(5, ghiChu);
+                updatePs.setString(6, maHoaDon);
+                updatePs.setString(7, maMon);
+
+                if (updatePs.executeUpdate() > 0) {
+                    return true;
+                }
+            }
+
+            try (PreparedStatement insertPs = conn.prepareStatement(insertSql)) {
+                insertPs.setString(1, maHoaDon);
+                insertPs.setString(2, maMon);
+                insertPs.setInt(3, soLuong);
+                insertPs.setDouble(4, giaBan);
+                insertPs.setString(5, ghiChu);
+
+                return insertPs.executeUpdate() > 0;
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -107,6 +127,68 @@ public class ChiTietHoaDonDAO implements IDAO<ChiTietHoaDonDTO, String> {
             ps.setString(1, maHoaDon);
             ps.setString(2, maMon);
             return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    /**
+     * Giảm số lượng của một món trong hóa đơn.
+     * Nếu số lượng hiện tại <= số lượng cần giảm thì xóa luôn dòng món đó.
+     *
+     * @param maHoaDon mã hóa đơn chứa món cần giảm
+     * @param maMon mã món cần giảm
+     * @param soLuongGiam số lượng cần giảm
+     * @return true nếu thao tác thành công, false nếu thất bại
+     */
+    public boolean giamSoLuongMonTrongHoaDon(String maHoaDon, String maMon, int soLuongGiam) {
+        if (soLuongGiam <= 0) {
+            return false;
+        }
+
+        String selectSql = "SELECT soLuong FROM ChiTietHoaDon WHERE maHoaDon = ? AND maMon = ?";
+        String updateSql = "UPDATE ChiTietHoaDon SET soLuong = ? WHERE maHoaDon = ? AND maMon = ?";
+        String deleteSql = "DELETE FROM ChiTietHoaDon WHERE maHoaDon = ? AND maMon = ?";
+
+        try (Connection conn = DBConnection.getConnection()) {
+            conn.setAutoCommit(false);
+
+            int soLuongHienTai;
+            try (PreparedStatement selectPs = conn.prepareStatement(selectSql)) {
+                selectPs.setString(1, maHoaDon);
+                selectPs.setString(2, maMon);
+                try (ResultSet rs = selectPs.executeQuery()) {
+                    if (!rs.next()) {
+                        conn.rollback();
+                        return false;
+                    }
+                    soLuongHienTai = rs.getInt("soLuong");
+                }
+            }
+
+            boolean thanhCong;
+            if (soLuongHienTai <= soLuongGiam) {
+                try (PreparedStatement deletePs = conn.prepareStatement(deleteSql)) {
+                    deletePs.setString(1, maHoaDon);
+                    deletePs.setString(2, maMon);
+                    thanhCong = deletePs.executeUpdate() > 0;
+                }
+            } else {
+                try (PreparedStatement updatePs = conn.prepareStatement(updateSql)) {
+                    updatePs.setInt(1, soLuongHienTai - soLuongGiam);
+                    updatePs.setString(2, maHoaDon);
+                    updatePs.setString(3, maMon);
+                    thanhCong = updatePs.executeUpdate() > 0;
+                }
+            }
+
+            if (thanhCong) {
+                conn.commit();
+            } else {
+                conn.rollback();
+            }
+            return thanhCong;
         } catch (SQLException e) {
             e.printStackTrace();
         }

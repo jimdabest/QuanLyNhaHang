@@ -116,15 +116,28 @@ public class SoDoBanPanel extends JPanel {
 
                 if (ban.getTrangThai().equalsIgnoreCase("Đang ăn")) {
                     main.openTable(ban.getMaBan());
-                    // Lưu ý: Chuyển sang card layout chứa bill nếu cần
+                    main.chuyenTrang("Thực đơn");
                 } else if (ban.getTrangThai().equalsIgnoreCase("Trống")) {
-                    int confirm = JOptionPane.showConfirmDialog(this,
-                            "Mở bàn " + ban.getTenBan() + "?", "Xác nhận", JOptionPane.YES_NO_OPTION);
-                    if (confirm == JOptionPane.YES_OPTION) {
+                    Object[] options = {"Mở bàn ngay", "Đặt bàn", "Hủy"};
+                    int choice = JOptionPane.showOptionDialog(
+                            this,
+                            "Bạn muốn thao tác gì với " + ban.getTenBan() + "?",
+                            "Chọn thao tác",
+                            JOptionPane.DEFAULT_OPTION,
+                            JOptionPane.QUESTION_MESSAGE,
+                            null,
+                            options,
+                            options[0]
+                    );
+
+                    if (choice == 0) {
                         if (new HoaDonBUS().moBanMoi(ban.getMaBan(), null)) {
                             loadSoDoBan();
                             main.openTable(ban.getMaBan());
+                            main.chuyenTrang("Thực đơn");
                         }
+                    } else if (choice == 1) {
+                        main.moManDatBanChoBan(ban.getMaBan());
                     }
                 } else if (ban.getTrangThai().equalsIgnoreCase("Đã đặt")) {
                     int confirm = JOptionPane.showConfirmDialog(this,
@@ -143,6 +156,7 @@ public class SoDoBanPanel extends JPanel {
                             if (new HoaDonBUS().moBanMoi(ban.getMaBan(), phieu.getMaKhachHang())) {
                                 loadSoDoBan();
                                 main.openTable(ban.getMaBan());
+                                main.chuyenTrang("Thực đơn");
                             }
                         }
                     }
